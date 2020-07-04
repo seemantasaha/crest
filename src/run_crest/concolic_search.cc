@@ -1366,4 +1366,17 @@ bool CfgHeuristicSearch::DoBoundedBFS(int i, int depth, const SymbolicExecution&
   return false;
 }
 
+////////////////////////////////////////////////////////////////////////
+//// BranchSelectivitySearch ///////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+BranchSelectivitySearch::BranchSelectivitySearch(const string& program, int max_iterations)
+  : Search(program, max_iterations) { }
+
+BranchSelectivitySearch::~BranchSelectivitySearch() { }
+
+void BranchSelectivitySearch::Run() {
+  fprintf(stderr, "Stub for BranchSelectivitySearch::Run()\n");
+}
+
 }  // namespace crest

@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
             "-<strategy> [strategy options]\n");
     fprintf(stderr,
             "  Strategies include: "
-            "dfs, cfg, random, uniform_random, random_input \n");
+            "dfs, cfg, random, uniform_random, random_input, branch_selectivity \n");
     return 1;
   }
 
@@ -58,6 +58,8 @@ int main(int argc, char* argv[]) {
     } else {
       strategy = new crest::UniformRandomSearch(prog, num_iters, atoi(argv[4]));
     }
+  } else if (search_type == "-branch_selectivity") { // search based on branch selectivity
+    strategy = new crest::BranchSelectivitySearch(prog, num_iters);
   } else {
     fprintf(stderr, "Unknown search strategy: %s\n", search_type.c_str());
     return 1;

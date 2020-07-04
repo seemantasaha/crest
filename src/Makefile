@@ -2,7 +2,7 @@
 YICES_DIR=/home/ganesh/yices-1.0.40
 
 CC=$(CXX)
-CFLAGS = -I. -I$(YICES_DIR)/include -Wall -O2 -std=c++98 -no-pie
+CFLAGS = -I. -I$(YICES_DIR)/include -Wall -O2  -std=gnu++98 -no-pie
 CXXFLAGS = $(CFLAGS)
 LDFLAGS = -L$(YICES_DIR)/lib
 LOADLIBES = -lyices

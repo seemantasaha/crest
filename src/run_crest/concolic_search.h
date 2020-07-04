@@ -278,6 +278,15 @@ class CfgHeuristicSearch : public Search {
 			const set<branch_id_t>& bs);
 };
 
+
+class BranchSelectivitySearch : public Search {
+ public:
+  BranchSelectivitySearch(const string& program, int max_iterations);
+  virtual ~BranchSelectivitySearch();
+
+  virtual void Run();
+};
+
 }  // namespace crest
 
 #endif  // RUN_CREST_CONCOLIC_SEARCH_H__
