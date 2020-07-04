@@ -1,0 +1,2 @@
+g++ -I. -I/home/seem/research/tools/yices-1.0.40/include -I/home/seem/research/tools/ABC/src -Wall -O2 -no-pie  -L/home/seem/research/tools/yices-1.0.40/lib  abc/ABCDriver.cc -lyices -labc  -o abc/ABCDriver
+cp abc/ABCDriver ../bin
