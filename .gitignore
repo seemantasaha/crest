@@ -12,5 +12,7 @@
 *.la
 *.a
 
-# Makefile temporarily
+# Temporary
 src/Makefile
+src/
+test/
