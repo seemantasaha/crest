@@ -1376,7 +1376,65 @@ BranchSelectivitySearch::BranchSelectivitySearch(const string& program, int max_
 BranchSelectivitySearch::~BranchSelectivitySearch() { }
 
 void BranchSelectivitySearch::Run() {
-  fprintf(stderr, "Stub for BranchSelectivitySearch::Run()\n");
+  SymbolicExecution next_ex;
+
+  while (true) {
+    // Execution (on empty/random inputs).
+    fprintf(stderr, "RESET\n");
+    vector<value_t> next_input;
+    RunProgram(next_input, &ex_);
+    UpdateCoverage(ex_);
+
+    // Do some iterations.
+    int count = 0;
+    while (count++ < 10000) {
+      size_t idx;
+      if (SolveRandomBranch(&next_input, &idx)) {
+        RunProgram(next_input, &next_ex);
+        bool found_new_branch = UpdateCoverage(next_ex);
+        bool prediction_failed =
+	        !CheckPrediction(ex_, next_ex, ex_.path().constraints_idx()[idx]);
+
+        if (found_new_branch) {
+          count = 0;
+          ex_.Swap(next_ex);
+          if (prediction_failed)
+            fprintf(stderr, "Prediction failed (but got lucky).\n");
+        } else if (!prediction_failed) {
+          ex_.Swap(next_ex);
+        } else {
+          fprintf(stderr, "Prediction failed.\n");
+        }
+      }
+    }
+  }
+}
+
+bool BranchSelectivitySearch::SolveRandomBranch(vector<value_t>* next_input, size_t* idx) {
+  vector<size_t> idxs(ex_.path().constraints().size());
+  for (size_t i = 0; i < idxs.size(); i++)
+    idxs[i] = i;
+
+  for (int tries = 0; tries < 1000; tries++) {
+    // Pick a random index.
+    if (idxs.size() == 0)
+      break;
+    size_t r = rand() % idxs.size();
+    size_t i = idxs[r];
+    swap(idxs[r], idxs.back());
+    idxs.pop_back();
+
+    if (SolveAtBranch(ex_, i, next_input)) {
+      fprintf(stderr, "Solved %zu/%zu\n", i, idxs.size());
+      *idx = i;
+      return true;
+    }
+  }
+
+  // We failed to solve a branch, so reset the input.
+  fprintf(stderr, "FAIL\n");
+  next_input->clear();
+  return false;
 }
 
 }  // namespace crest

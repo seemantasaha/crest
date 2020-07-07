@@ -285,6 +285,11 @@ class BranchSelectivitySearch : public Search {
   virtual ~BranchSelectivitySearch();
 
   virtual void Run();
+
+ private:
+  SymbolicExecution ex_;
+
+  bool SolveRandomBranch(vector<value_t>* next_input, size_t* idx);
 };
 
 }  // namespace crest
