@@ -509,7 +509,7 @@ let writeStmts () =
         match l with
         (lh,ofs)->
                 (match lh with
-                  Var (v)-> Pretty.fprintf f "%a " d_type v.vtype
+                  Var (v)->Pretty.fprintf f "%a " d_type v.vtype
                 | Mem (e)-> printType e f)
     and printType e f=
         match e with
@@ -539,11 +539,13 @@ let writeStmts () =
                 Pretty.fprintf f "(%a) " d_type t;
                 printType exp f  
         | AddrOf (l)->
-                Pretty.fprintf f "%a " d_lval l
+                printLval l f
+                (*Pretty.fprintf f "%a " d_lval l*)
         | AddrOfLabel (s)->
                 Pretty.fprintf f "%a " d_stmt !s
         | StartOf (l)->
-                Pretty.fprintf f "%a " d_lval l
+                printLval l f
+                (*Pretty.fprintf f "%a " d_lval l*)
 
     in
     let rec writeToFile f ls =
