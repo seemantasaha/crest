@@ -496,10 +496,62 @@ let prepareGlobalForCFG glob =
   | _ -> ()
 
 let writeStmts () =
+    let printConst c f=
+        match c with
+          CInt64 (_,_,_)-> Pretty.fprintf f "int64 "
+        | CStr (_)-> Pretty.fprintf f "string "
+        | CWStr (_)-> Pretty.fprintf f "wchar_t "
+        | CChr (_)-> Pretty.fprintf f "char "
+        | CReal (_,_,_)-> Pretty.fprintf f "float "
+        | CEnum (_,_,_)-> Pretty.fprintf f "enum "
+    in
+    let rec printLval l f=
+        match l with
+        (lh,ofs)->
+                (match lh with
+                  Var (v)-> Pretty.fprintf f "%a " d_type v.vtype
+                | Mem (e)-> printType e f)
+    and printType e f=
+        match e with
+          Const (c)-> printConst c f
+        | Lval (l)-> printLval l f(*Pretty.fprintf f "%a " d_lval l*)
+        | SizeOf (t)-> Pretty.fprintf f "%a " d_type t
+        | SizeOfE (exp)-> printType exp f
+        | AlignOf (t)-> Pretty.fprintf f "%a " d_type t
+        | AlignOfE(exp)-> printType exp f
+        | UnOp (op,exp,t)-> 
+                Pretty.fprintf f "%a " d_unop op;
+                (printType exp f);
+                Pretty.fprintf f"(type: %a) " d_type t
+        | BinOp (op,e1,e2,t)->
+                (printType e1 f);
+                Pretty.fprintf f "%a " d_binop op;
+                (printType e2 f);
+                Pretty.fprintf f "(type: %a) " d_type t
+        | Question (e1,e2,e3,t)->
+                (printType e1 f);
+                Pretty.fprintf f "? ";
+                (printType e2 f);
+                Pretty.fprintf f ": ";
+                (printType e3 f);
+                Pretty.fprintf f "(type: %a) " d_type t
+        | CastE (t,exp)->
+                Pretty.fprintf f "(%a) " d_type t;
+                printType exp f  
+        | AddrOf (l)->
+                Pretty.fprintf f "%a " d_lval l
+        | AddrOfLabel (s)->
+                Pretty.fprintf f "%a " d_stmt !s
+        | StartOf (l)->
+                Pretty.fprintf f "%a " d_lval l
+
+    in
     let rec writeToFile f ls =
         match ls with
         ((e,s,b1,b2,fc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d\n" d_exp e s b1 b2 fc;
-                  writeToFile f tl
+                (printType e f);
+                Pretty.fprintf f "\n\n";  
+                writeToFile f tl
         | _ -> ()
     in
     let f = open_out "branch_statements" in
