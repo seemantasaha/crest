@@ -302,16 +302,14 @@ bool Search::SolveAtBranch(const SymbolicExecution& ex,
   // Optimization: If any of the previous constraints are idential to the
   // branch_idx-th constraint, immediately return false.
   for (int i = static_cast<int>(branch_idx) - 1; i >= 0; i--) {
-    
-    // TODO: print symbolic expression
-    string s = "";
-    constraints[branch_idx]->AppendToString(&s);
-    cout << "Branch Constraints: " << s << endl;
-
-
     if (constraints[branch_idx]->Equal(*constraints[i]))
       return false;
   }
+
+  // TODO: print symbolic expression
+  string s = "";
+  constraints[branch_idx]->AppendToString(&s);
+  cout << "Branch Constraints: " << s << endl;
 
   vector<const SymbolicPred*> cs(constraints.begin(),
 				 constraints.begin()+branch_idx+1);
