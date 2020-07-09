@@ -13,6 +13,7 @@
 #include <cmath>
 #include <fstream>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +24,8 @@
 #include "run_crest/concolic_search.h"
 
 using std::binary_function;
+using std::cout;
+using std::endl;
 using std::ifstream;
 using std::ios;
 using std::min;
@@ -299,6 +302,13 @@ bool Search::SolveAtBranch(const SymbolicExecution& ex,
   // Optimization: If any of the previous constraints are idential to the
   // branch_idx-th constraint, immediately return false.
   for (int i = static_cast<int>(branch_idx) - 1; i >= 0; i--) {
+    
+    // TODO: print symbolic expression
+    string s = "";
+    constraints[branch_idx]->AppendToString(&s);
+    cout << "Branch Constraints: " << s << endl;
+
+
     if (constraints[branch_idx]->Equal(*constraints[i]))
       return false;
   }
