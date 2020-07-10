@@ -516,19 +516,19 @@ let writeStmts () =
         | UnOp (op,exp,t)-> 
                 Pretty.fprintf f "%a " d_unop op;
                 (printType exp f);
-                Pretty.fprintf f"(type: %a) " d_type t
+                (*Pretty.fprintf f"(type: %a) " d_type t*)
         | BinOp (op,e1,e2,t)->
                 (printType e1 f);
                 Pretty.fprintf f "%a " d_binop op;
                 (printType e2 f);
-                Pretty.fprintf f "(type: %a) " d_type t
+                (*Pretty.fprintf f "(type: %a) " d_type t*)
         | Question (e1,e2,e3,t)->
                 (printType e1 f);
                 Pretty.fprintf f "? ";
                 (printType e2 f);
                 Pretty.fprintf f ": ";
                 (printType e3 f);
-                Pretty.fprintf f "(type: %a) " d_type t
+                (*Pretty.fprintf f "(type: %a) " d_type t*)
         | CastE (t,exp)->
                 Pretty.fprintf f "(%a) " d_type t;
                 printType exp f  
