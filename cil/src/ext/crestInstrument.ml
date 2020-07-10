@@ -507,51 +507,58 @@ let writeStmts () =
     in
     let rec printType e f=
         match e with
-          Const (c)-> printConst c f
-        | Lval (l)-> Pretty.fprintf f "%a " d_type (typeOf e)
-        | SizeOf (t)-> Pretty.fprintf f "%a " d_type t
+          (*Const (c)-> printConst c f*)
+        | Lval (l)-> Pretty.fprintf f "\t\t\"%a\": \"%a\",\n " d_exp e d_type (typeOf e)
+        | SizeOf (t)-> Pretty.fprintf f "\t\t\"%a\": \"%a\",\n " d_exp e d_type t
         | SizeOfE (exp)-> printType exp f
-        | AlignOf (t)-> Pretty.fprintf f "%a " d_type t
+        | AlignOf (t)-> Pretty.fprintf f "\t\t\"%a\": \"%a\",\n " d_exp e d_type t
         | AlignOfE(exp)-> printType exp f
         | UnOp (op,exp,t)-> 
-                Pretty.fprintf f "%a " d_unop op;
+                (*Pretty.fprintf f "%a " d_unop op;*)
                 (printType exp f);
                 (*Pretty.fprintf f"(type: %a) " d_type t*)
         | BinOp (op,e1,e2,t)->
                 (printType e1 f);
-                Pretty.fprintf f "%a " d_binop op;
+                (*Pretty.fprintf f "%a " d_binop op;*)
                 (printType e2 f);
                 (*Pretty.fprintf f "(type: %a) " d_type t*)
         | Question (e1,e2,e3,t)->
                 (printType e1 f);
-                Pretty.fprintf f "? ";
+                (*Pretty.fprintf f "? ";*)
                 (printType e2 f);
-                Pretty.fprintf f ": ";
+                (*Pretty.fprintf f ": ";*)
                 (printType e3 f);
                 (*Pretty.fprintf f "(type: %a) " d_type t*)
         | CastE (t,exp)->
-                Pretty.fprintf f "(%a) " d_type t;
+                (*Pretty.fprintf f "(%a) " d_type t;*)
                 printType exp f  
         | AddrOf (l)->
-                Pretty.fprintf f "%a " d_type (typeOf e)
+                Pretty.fprintf f "\t\t\"%a\": \"%a\",\n " d_exp e d_type (typeOf e)
         | AddrOfLabel (s)->
-                Pretty.fprintf f "%a " d_type (typeOf e)
+                Pretty.fprintf f "\t\t\"%a\": \"%a\",\n " d_exp e d_type (typeOf e)
         | StartOf (l)->
-                Pretty.fprintf f "%a " d_type (typeOf e)
-        | _ ->  Pretty.fprintf f "%a " d_exp e
+                Pretty.fprintf f "\t\t\"%a\": \"%a\",\n " d_exp e d_type (typeOf e)
+        | _ ->  Pretty.fprintf f "\t\t\"%a\": \"%a\",\n " d_exp e d_type (typeOf e)
 
     in
     let rec writeToFile f ls =
         match ls with
-        ((e,s,b1,b2,fc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d\n" d_exp e s b1 b2 fc;
+        ((e,s,b1,b2,fc)::tl)-> Pretty.fprintf f "\t{\n";
+                Pretty.fprintf f "\t\t\"Expressions\": \"%a\",\n\t\t\"Statement ID\": \"%d\",\n\t\t\"Branch1 Statement ID\": \"%d\",\n\t\t\"Branch2 Statement ID\": \"%d\",\n\t\t\"Function Count\": \"%d\",\n" d_exp e s b1 b2 fc;
                 (printType e f);
-                Pretty.fprintf f "\n\n";  
-                writeToFile f tl
+                Pretty.fprintf f "\t\t\"End\": \"End\"\n";
+                if List.length tl = 0
+                then
+                (Pretty.fprintf f "\t}\n")
+                else (Pretty.fprintf f "\t},\n");
+                writeToFile f tl;
         | _ -> ()
     in
     let f = open_out "branch_statements" in
-    Pretty.fprintf f "Expression, Statement ID, Branch1 Statement ID, Branch2 Statement ID, Function Count (ID)\n";
+    Pretty.fprintf f "[\n";
+    (*Pretty.fprintf f "Expression, Statement ID, Branch1 Statement ID, Branch2 Statement ID, Function Count (ID)\n";*)
     writeToFile f !stmts;
+    Pretty.fprintf f "]\n";
     close_out f
 
 let feature : featureDescr =
