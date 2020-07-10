@@ -290,6 +290,8 @@ class BranchSelectivitySearch : public Search {
   SymbolicExecution ex_;
 
   bool SolveRandomBranch(vector<value_t>* next_input, size_t* idx);
+
+  bool SolveSelectiveBranch(vector<value_t>* next_input, size_t* idx);
 };
 
 }  // namespace crest

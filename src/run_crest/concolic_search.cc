@@ -19,6 +19,8 @@
 #include <stdlib.h>
 #include <queue>
 #include <utility>
+#include <string>
+#include <sstream>
 
 #include "base/yices_solver.h"
 #include "run_crest/concolic_search.h"
@@ -1397,7 +1399,7 @@ void BranchSelectivitySearch::Run() {
     int count = 0;
     while (count++ < 10000) {
       size_t idx;
-      if (SolveRandomBranch(&next_input, &idx)) {
+      if (SolveSelectiveBranch(&next_input, &idx)) {
         RunProgram(next_input, &next_ex);
         bool found_new_branch = UpdateCoverage(next_ex);
         bool prediction_failed =
@@ -1423,6 +1425,93 @@ bool BranchSelectivitySearch::SolveRandomBranch(vector<value_t>* next_input, siz
   for (size_t i = 0; i < idxs.size(); i++)
     idxs[i] = i;
 
+  for (int tries = 0; tries < 1000; tries++) {
+    // Pick a random index.
+    if (idxs.size() == 0)
+      break;
+    size_t r = rand() % idxs.size();
+    size_t i = idxs[r];
+    swap(idxs[r], idxs.back());
+    idxs.pop_back();
+
+    if (SolveAtBranch(ex_, i, next_input)) {
+      fprintf(stderr, "Solved %zu/%zu\n", i, idxs.size());
+      *idx = i;
+      return true;
+    }
+  }
+
+  // We failed to solve a branch, so reset the input.
+  fprintf(stderr, "FAIL\n");
+  next_input->clear();
+  return false;
+}
+
+bool BranchSelectivitySearch::SolveSelectiveBranch(vector<value_t>* next_input, size_t* idx) {
+  vector<size_t> idxs(ex_.path().constraints().size());
+  vector<double> branch_prob(ex_.path().constraints().size()); 
+
+  for (size_t i = 0; i < idxs.size(); i++) {
+
+    const vector<SymbolicPred*>& constraints = ex_.path().constraints();
+
+    // TODO: print symbolic expression for negated branch condition
+    string branch_exp = "";
+    constraints[i]->Negate();
+    constraints[i]->AppendToString(&branch_exp);
+    cout << "Branch Constraints: " << branch_exp << endl;
+
+    std::ostringstream br;
+    for (int i = 0; i < branch_exp.length(); i++) {
+      if(branch_exp[i] == '-') {
+        br << "(- ";
+        i++;
+        while(branch_exp[i] != ' ') {
+          br << branch_exp[i];
+          i++;
+        }
+        br << ") ";
+      } else {
+        br << branch_exp[i];
+      }
+    }
+    string updated_branch_exp = br.str();
+
+    // translate negated branch condition expression to SMT_LIB format
+    string smt_lib_cons = "";
+    map<var_t, type_t>::const_iterator it;
+
+    for ( it = ex_.vars().begin(); it != ex_.vars().end(); it++ )
+    {
+        //cout<< "var: " << it->first << "\ttype: " << it->second << endl;
+        std::ostringstream stm;
+        stm << it->first;
+        string var_name = "x" + stm.str();
+        
+        string var_type = "";
+        if (it->second == 5) //write a switch case based on enum value of type_t in basic_types.h file
+          var_type = "Int";
+        
+        if (branch_exp.find(var_name) != string::npos) {
+          smt_lib_cons = smt_lib_cons + "(declare-fun " + var_name + " () " + var_type + ")\n";
+        }
+    }
+
+    smt_lib_cons = smt_lib_cons + "(assert " + updated_branch_exp + ")\n";
+    smt_lib_cons = smt_lib_cons + "(check-sat)";
+
+    cout << smt_lib_cons << endl;
+
+    constraints[i]->Negate();
+
+    // do model counting for negated branch condition and put the probability in
+
+    branch_prob[i] = 0.0;
+
+    idxs[i] = i;
+  }
+
+  //replace random selection of branches by branch selectivity algorithm
   for (int tries = 0; tries < 1000; tries++) {
     // Pick a random index.
     if (idxs.size() == 0)
