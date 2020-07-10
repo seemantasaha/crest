@@ -505,16 +505,10 @@ let writeStmts () =
         | CReal (_,_,_)-> Pretty.fprintf f "float "
         | CEnum (_,_,_)-> Pretty.fprintf f "enum "
     in
-    let rec printLval l f=
-        match l with
-        (lh,ofs)->
-                (match lh with
-                  Var (v)->Pretty.fprintf f "%a " d_type v.vtype
-                | Mem (e)-> printType e f)
-    and printType e f=
+    let rec printType e f=
         match e with
           Const (c)-> printConst c f
-        | Lval (l)-> printLval l f(*Pretty.fprintf f "%a " d_lval l*)
+        | Lval (l)-> Pretty.fprintf f "%a " d_type (typeOf e)
         | SizeOf (t)-> Pretty.fprintf f "%a " d_type t
         | SizeOfE (exp)-> printType exp f
         | AlignOf (t)-> Pretty.fprintf f "%a " d_type t
@@ -539,13 +533,12 @@ let writeStmts () =
                 Pretty.fprintf f "(%a) " d_type t;
                 printType exp f  
         | AddrOf (l)->
-                printLval l f
-                (*Pretty.fprintf f "%a " d_lval l*)
+                Pretty.fprintf f "%a " d_type (typeOf e)
         | AddrOfLabel (s)->
-                Pretty.fprintf f "%a " d_stmt !s
+                Pretty.fprintf f "%a " d_type (typeOf e)
         | StartOf (l)->
-                printLval l f
-                (*Pretty.fprintf f "%a " d_lval l*)
+                Pretty.fprintf f "%a " d_type (typeOf e)
+        | _ ->  Pretty.fprintf f "%a " d_exp e
 
     in
     let rec writeToFile f ls =
