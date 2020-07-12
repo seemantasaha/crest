@@ -510,7 +510,10 @@ let writeStmts () =
     let writeDeclare f key t=
         match t with
           (n,tl)->  Pretty.fprintf f "(declare-const x%d %a)\n" n d_type tl;
-        varCount := !varCount
+                    match key with
+                    | Const (c)-> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key;
+                                  varCount := !varCount
+                    | _-> varCount := !varCount
     in
     let writeDeclarations m f =
         TestMap.iter (writeDeclare f) m 
