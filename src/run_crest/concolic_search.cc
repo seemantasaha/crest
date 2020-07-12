@@ -901,8 +901,9 @@ CfgHeuristicSearch::~CfgHeuristicSearch() { }
 void CfgHeuristicSearch::Run() {
   set<branch_id_t> newly_covered_;
   SymbolicExecution ex;
+  int flag_to_stop = 0;
 
-  while (true) {
+  while (true && flag_to_stop == 0) {
     covered_.assign(max_branch_, false);
     num_covered_ = 0;
 
@@ -913,9 +914,11 @@ void CfgHeuristicSearch::Run() {
       UpdateBranchDistances();
       PrintStats();
     }
+    if (num_covered_ == reachable_branches_)
+      flag_to_stop = 1;
 
     // while (DoSearch(3, 200, 0, kInfiniteDistance+10, ex)) {
-    while (DoSearch(5, 30, 0, kInfiniteDistance, ex)) {
+    while (DoSearch(5, 30, 0, kInfiniteDistance, ex) && flag_to_stop == 0) {
     // while (DoSearch(3, 10000, 0, kInfiniteDistance, ex)) {
       PrintStats();
       // As long as we keep finding new branches . . . .
@@ -1387,8 +1390,9 @@ BranchSelectivitySearch::~BranchSelectivitySearch() { }
 
 void BranchSelectivitySearch::Run() {
   SymbolicExecution next_ex;
+  int flag_to_stop = 0;
 
-  while (true) {
+  while (true && flag_to_stop == 0) {
     // Execution (on empty/random inputs).
     fprintf(stderr, "RESET\n");
     vector<value_t> next_input;
@@ -1397,11 +1401,14 @@ void BranchSelectivitySearch::Run() {
 
     // Do some iterations.
     int count = 0;
-    while (count++ < 10000) {
+    while (count++ < 10000 && flag_to_stop == 0) {
       size_t idx;
       if (SolveSelectiveBranch(&next_input, &idx)) {
         RunProgram(next_input, &next_ex);
         bool found_new_branch = UpdateCoverage(next_ex);
+        cout << num_covered_ << " out of " << reachable_branches_ << " branches covered." << endl;
+        if (num_covered_ == reachable_branches_)
+          flag_to_stop = 1;
         bool prediction_failed =
 	        !CheckPrediction(ex_, next_ex, ex_.path().constraints_idx()[idx]);
 
@@ -1447,9 +1454,24 @@ bool BranchSelectivitySearch::SolveRandomBranch(vector<value_t>* next_input, siz
   return false;
 }
 
+Vlab::Theory::BigInteger BranchSelectivitySearch::getModelCount(string constraint, int bound) {
+    Vlab::Driver driver;
+    driver.InitializeLogger(0);
+    driver.set_option(Vlab::Option::Name::REGEX_FLAG, 0x000f);
+    std::istringstream str(constraint);
+    driver.Parse(&str);
+    driver.InitializeSolver();
+    driver.Solve();
+    Vlab::Theory::BigInteger count = driver.CountInts(bound);
+    driver.reset();
+
+    return count;
+}
+
 bool BranchSelectivitySearch::SolveSelectiveBranch(vector<value_t>* next_input, size_t* idx) {
   vector<size_t> idxs(ex_.path().constraints().size());
   vector<double> branch_prob(ex_.path().constraints().size()); 
+  int bound = 32;
 
   for (size_t i = 0; i < idxs.size(); i++) {
 
@@ -1462,6 +1484,8 @@ bool BranchSelectivitySearch::SolveSelectiveBranch(vector<value_t>* next_input, 
     cout << "Branch Constraints: " << branch_exp << endl;
 
     std::ostringstream br;
+    int flag = 0;
+    // Fix unary negation operator and not equal format
     for (int i = 0; i < branch_exp.length(); i++) {
       if(branch_exp[i] == '-') {
         br << "(- ";
@@ -1471,11 +1495,18 @@ bool BranchSelectivitySearch::SolveSelectiveBranch(vector<value_t>* next_input, 
           i++;
         }
         br << ") ";
+      } else if(branch_exp[i] == '/' && branch_exp[i+1] == '=') {
+        br << "not (= ";
+        i = i + 2;
+        flag = 1;
       } else {
         br << branch_exp[i];
       }
     }
-    string updated_branch_exp = br.str();
+    if (flag)
+      br << ')';
+    branch_exp = br.str();
+
 
     // translate negated branch condition expression to SMT_LIB format
     string smt_lib_cons = "";
@@ -1489,15 +1520,33 @@ bool BranchSelectivitySearch::SolveSelectiveBranch(vector<value_t>* next_input, 
         string var_name = "x" + stm.str();
         
         string var_type = "";
-        if (it->second == 5) //write a switch case based on enum value of type_t in basic_types.h file
-          var_type = "Int";
+        cout<<it->second<<endl;
+
+
+
+        var_type = "Int";
+        
+        switch(it->second) {
+          case 1: //char
+            bound = 8;
+            break;
+          case 3: //short
+            bound = 16;
+            break;
+          case 5: //int
+            bound = 32;
+            break;
+          default: //long and other types, need to update later
+            bound = 32;
+            break;
+        }
         
         if (branch_exp.find(var_name) != string::npos) {
           smt_lib_cons = smt_lib_cons + "(declare-fun " + var_name + " () " + var_type + ")\n";
         }
     }
 
-    smt_lib_cons = smt_lib_cons + "(assert " + updated_branch_exp + ")\n";
+    smt_lib_cons = smt_lib_cons + "(assert " + branch_exp + ")\n";
     smt_lib_cons = smt_lib_cons + "(check-sat)";
 
     cout << smt_lib_cons << endl;
@@ -1505,20 +1554,37 @@ bool BranchSelectivitySearch::SolveSelectiveBranch(vector<value_t>* next_input, 
     constraints[i]->Negate();
 
     // do model counting for negated branch condition and put the probability in
-
-    branch_prob[i] = 0.0;
-
+    if(branch_prob_map.find(smt_lib_cons) == branch_prob_map.end()) {
+      Vlab::Theory::BigInteger count = getModelCount(smt_lib_cons, bound);
+      branch_prob[i] = (double)count/4294967296.0;
+      branch_prob_map.insert(make_pair(smt_lib_cons,branch_prob[i]));
+    } else {
+      branch_prob[i] = branch_prob_map[smt_lib_cons];
+    }
+    cout << "Branch probability: " << branch_prob[i] << endl;
+ 
     idxs[i] = i;
   }
+
+  
+  sort( idxs.begin(),idxs.end(), [&](int m,int n){return branch_prob[m]>branch_prob[n];} );
+  //sort(branch_prob.begin(), branch_prob.end());
+
+  // for (int i = 0; i < idxs.size(); i++) {
+  //   cout << idxs.at(i) << ' ';
+  // }
+
+  // for (int i = 0; i < branch_prob.size(); i++) {
+  //   cout << branch_prob.at(i) << ' ';
+  // }
 
   //replace random selection of branches by branch selectivity algorithm
   for (int tries = 0; tries < 1000; tries++) {
     // Pick a random index.
     if (idxs.size() == 0)
       break;
-    size_t r = rand() % idxs.size();
-    size_t i = idxs[r];
-    swap(idxs[r], idxs.back());
+    
+    size_t i = idxs.back();
     idxs.pop_back();
 
     if (SolveAtBranch(ex_, i, next_input)) {

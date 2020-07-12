@@ -26,6 +26,8 @@
 #include "base/basic_types.h"
 #include "base/symbolic_execution.h"
 
+#include <abc/Driver.h>
+
 using std::map;
 using std::vector;
 using __gnu_cxx::hash_map;
@@ -281,6 +283,7 @@ class CfgHeuristicSearch : public Search {
 
 class BranchSelectivitySearch : public Search {
  public:
+  map<string,double> branch_prob_map;
   BranchSelectivitySearch(const string& program, int max_iterations);
   virtual ~BranchSelectivitySearch();
 
@@ -292,6 +295,8 @@ class BranchSelectivitySearch : public Search {
   bool SolveRandomBranch(vector<value_t>* next_input, size_t* idx);
 
   bool SolveSelectiveBranch(vector<value_t>* next_input, size_t* idx);
+
+  Vlab::Theory::BigInteger getModelCount(string constraint, int bound);
 };
 
 }  // namespace crest
