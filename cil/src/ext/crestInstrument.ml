@@ -511,11 +511,11 @@ let writeStmts () =
     in*)
 	let printType f t =
 		match t with
-					| TInt (_,_)-> Pretty.fprintf f "Int )\n"
-					| TFloat (_,_)-> Pretty.fprintf f "Int64 )\n"
-					| TPtr (_,_)-> Pretty.fprintf f "Int )\n"
-					(*| TArray-> Pretty.fprintf f "%a )\n"*)
-					| _ -> Pretty.fprintf f "%a )\n" d_type t
+					| TInt (_,_)-> Pretty.fprintf f "Int)\n"
+					| TFloat (_,_)-> Pretty.fprintf f "Int64)\n"
+					| TPtr (_,_)-> Pretty.fprintf f "Int)\n"
+					(*| TArray-> Pretty.fprintf f "%a)\n"*)
+					| _ -> Pretty.fprintf f "%a)\n" d_type t
 	in
     let writeDeclare f key t=
         match t with
