@@ -498,22 +498,35 @@ let prepareGlobalForCFG glob =
 module TestMap = Map.Make(struct type t = Cil.exp let compare = compare end)
 let varCount = ref 0 
 let writeStmts () =
-    (*let printConst c f=
-        match c with
-          CInt64 (_,_,_)-> Pretty.fprintf f "int64 "
-        | CStr (_)-> Pretty.fprintf f "string "
-        | CWStr (_)-> Pretty.fprintf f "wchar_t "
-        | CChr (_)-> Pretty.fprintf f "char "
-        | CReal (_,_,_)-> Pretty.fprintf f "float "
-        | CEnum (_,_,_)-> Pretty.fprintf f "enum "
+    (*let printLval l f=
+        match l with
+          (lh,ofs)-> 
+			match lh with
+			|Var (v)-> if v.vreferenced = true
+						then Pretty.fprintf f v.vdescr
+						else Pretty.fprintf f ""
+			| _ -> Pretty.fprintf f ""
+		  
+        
     in*)
+	let printType f t =
+		match t with
+					| TInt (_,_)-> Pretty.fprintf f "Int )\n"
+					| TFloat (_,_)-> Pretty.fprintf f "Int64 )\n"
+					| TPtr (_,_)-> Pretty.fprintf f "Int )\n"
+					(*| TArray-> Pretty.fprintf f "%a )\n"*)
+					| _ -> Pretty.fprintf f "%a )\n" d_type t
+	in
     let writeDeclare f key t=
         match t with
-          (n,tl)->  Pretty.fprintf f "(declare-const x%d %a)\n" n d_type tl;
-                    match key with
+          (n,tl)->  Pretty.fprintf f "(declare-const x%d " n;
+					printType f tl;
+                    (match key with
                     | Const (c)-> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key;
-                                  varCount := !varCount
-                    | _-> varCount := !varCount
+								varCount := !varCount
+					(*| Lval (l)-> printLval l f;
+								varCount := !varCount*)
+                    | _-> varCount := !varCount)
     in
     let writeDeclarations m f =
         TestMap.iter (writeDeclare f) m 
@@ -540,17 +553,37 @@ let writeStmts () =
 					Pretty.fprintf f") ")
         | BinOp (op,e1,e2,t)->
 				(match op with
-				|Eq->
+                | LAnd->Pretty.fprintf f "(and ";
+						(printSmt e1 f m);
+						(printSmt e2 f m);
+						Pretty.fprintf f ") "
+                | LOr->Pretty.fprintf f "(or ";
+						(printSmt e1 f m);
+						(printSmt e2 f m);
+						Pretty.fprintf f ") "
+				| Eq->
 					Pretty.fprintf f "(= ";
 					(printSmt e1 f m);
 					(printSmt e2 f m);
 					Pretty.fprintf f ") "
-				|Ne->
+				| Ne->
 					Pretty.fprintf f "(not(= ";
 					(printSmt e1 f m);
 					(printSmt e2 f m);
 					Pretty.fprintf f ")) "
-				|_->
+				| PlusPI
+                | IndexPI
+                | MinusPI
+                | MinusPP
+                | Mult
+                | Div
+                | Mod
+                | Shiftlt
+                | Shiftrt
+                | BAnd
+                | BXor
+                | BOr -> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))
+				| _->
 					Pretty.fprintf f "(%a " d_binop op;
 					(printSmt e1 f m);
 					(printSmt e2 f m);
@@ -590,8 +623,22 @@ let writeStmts () =
         | UnOp (op,exp,t)-> 
                 getMapping m exp
         | BinOp (op,e1,e2,t)->
-                let m = getMapping m e1 in
-                getMapping m e2
+                (match op with
+                | PlusPI
+                | IndexPI
+                | MinusPI
+                | MinusPP
+                | Mult
+                | Div
+                | Mod
+                | Shiftlt
+                | Shiftrt
+                | BAnd
+                | BXor
+                | BOr -> varCount := !varCount + 1;
+                         TestMap.add e (!varCount,(typeOf e)) m
+                | _->   let m = getMapping m e1 in
+                        getMapping m e2)
         | Question (e1,e2,e3,t)->
                 let m = getMapping m e1 in
                 let m = getMapping m e2 in
@@ -612,11 +659,12 @@ let writeStmts () =
     let rec writeToFile f ls =
         match ls with
         ((e,s,b1,b2,fc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d\n" d_exp e s b1 b2 fc;
+				let d = open_out ("branch_" ^ (string_of_int s) ^".smt2") in
                 let m = getMapping TestMap.empty e in
-                writeDeclarations m f;
-                Pretty.fprintf f "(assert ";
-                printSmt e f m;
-                Pretty.fprintf f ")\n\n";  
+                writeDeclarations m d;
+                Pretty.fprintf d "(assert ";
+                printSmt e d m;
+                Pretty.fprintf d ")\n\n(check-sat)\n";  
                 writeToFile f tl
         | _ -> ()
     in
