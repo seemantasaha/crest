@@ -294,14 +294,15 @@ class BranchSelectivitySearch : public Search {
 
  private:
   SymbolicExecution ex_;
+  SymbolicExecution success_ex_;
 
   static const size_t kInfiniteReward = 100000;
 
-  bool SolveRandomBranch(vector<value_t>* next_input, size_t* idx);
+  bool SolveSelectiveBranch(int iters, const SymbolicExecution& prev_ex);
 
-  bool SolveSelectiveBranch(vector<value_t>* next_input, size_t* idx);
+  double GetBranchScore(const SymbolicExecution& prev_ex, int i);
 
-  Vlab::Theory::BigInteger getModelCount(string constraint, int bound);
+  Vlab::Theory::BigInteger GetModelCount(string constraint, int bound);
 };
 
 
