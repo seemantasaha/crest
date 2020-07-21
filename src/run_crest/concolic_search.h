@@ -283,7 +283,10 @@ class CfgHeuristicSearch : public Search {
 
 class BranchSelectivitySearch : public Search {
  public:
+  map<branch_id_t,double> coverage_reward_map;
   map<string,double> branch_prob_map;
+  map<string,double> branch_count_map;
+  map<string,double> branch_diff_map;
   BranchSelectivitySearch(const string& program, int max_iterations);
   virtual ~BranchSelectivitySearch();
 
@@ -292,12 +295,75 @@ class BranchSelectivitySearch : public Search {
  private:
   SymbolicExecution ex_;
 
+  static const size_t kInfiniteReward = 100000;
+
   bool SolveRandomBranch(vector<value_t>* next_input, size_t* idx);
 
   bool SolveSelectiveBranch(vector<value_t>* next_input, size_t* idx);
 
   Vlab::Theory::BigInteger getModelCount(string constraint, int bound);
 };
+
+
+class BranchSelectivityCFDSearch : public Search {
+ public:
+  map<branch_id_t,double> coverage_reward_map;
+  map<string,double> branch_prob_map;
+  map<string,double> branch_count_map;
+  map<string,double> branch_diff_map;
+  BranchSelectivityCFDSearch(const string& program, int max_iterations);
+  virtual ~BranchSelectivityCFDSearch();
+
+  virtual void Run();
+
+ private:
+  SymbolicExecution ex_;
+
+  static const size_t kInfiniteReward = 100000;
+
+  bool SolveRandomBranch(vector<value_t>* next_input, size_t* idx);
+
+  bool SolveSelectiveBranch(vector<value_t>* next_input, size_t* idx);
+
+  Vlab::Theory::BigInteger getModelCount(string constraint, int bound);
+
+
+
+  typedef vector<branch_id_t> nbhr_list_t;
+  vector<nbhr_list_t> cfg_;
+  vector<nbhr_list_t> cfg_rev_;
+  vector<size_t> dist_;
+
+  static const size_t kInfiniteDistance = 10000;
+
+  int iters_left_;
+
+  SymbolicExecution success_ex_;
+
+  void UpdateBranchDistances();
+  void PrintStats();
+  bool DoSearch(int depth, int iters, int pos, int maxDist, const SymbolicExecution& prev_ex);
+  bool DoBoundedBFS(int i, int depth, const SymbolicExecution& prev_ex);
+  void SkipUntilReturn(const vector<branch_id_t> path, size_t* pos);
+
+  bool FindAlongCfg(size_t i, unsigned int dist,
+        const SymbolicExecution& ex,
+        const set<branch_id_t>& bs);
+
+  bool SolveAlongCfg(size_t i, unsigned int max_dist,
+         const SymbolicExecution& prev_ex);
+
+  void CollectNextBranches(const vector<branch_id_t>& path,
+         size_t* pos, vector<size_t>* idxs);
+
+  size_t MinCflDistance(size_t i,
+      const SymbolicExecution& ex,
+      const set<branch_id_t>& bs);
+
+};
+
+
+
 
 }  // namespace crest
 

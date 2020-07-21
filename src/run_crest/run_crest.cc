@@ -58,8 +58,10 @@ int main(int argc, char* argv[]) {
     } else {
       strategy = new crest::UniformRandomSearch(prog, num_iters, atoi(argv[4]));
     }
-  } else if (search_type == "-branch_selectivity") { // search based on branch selectivity
+  } else if (search_type == "-bsg") { // search based on branch selectivity
     strategy = new crest::BranchSelectivitySearch(prog, num_iters);
+  } else if (search_type == "-bsg_cfg") { // search based on branch selectivity
+    strategy = new crest::BranchSelectivityCFDSearch(prog, num_iters);
   } else {
     fprintf(stderr, "Unknown search strategy: %s\n", search_type.c_str());
     return 1;
