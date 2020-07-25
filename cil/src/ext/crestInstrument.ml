@@ -656,10 +656,16 @@ let writeStmts () =
 						TestMap.add e (!varCount,(typeOf e)) m
 
     in
+    let rec rmrf path = match Sys.is_directory path with
+    | true -> Sys.readdir path |>
+                Array.iter (fun name -> rmrf (Filename.concat path name));
+                Unix.rmdir path
+    | false -> Sys.remove path
+    in
     let rec writeToFile f ls =
         match ls with
         ((e,s,b1,b2,fc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d\n" d_exp e s b1 b2 fc;
-				let d = open_out ("branch_" ^ (string_of_int s) ^".smt2") in
+				let d = open_out ("translation/branch_" ^ (string_of_int s) ^".smt2") in
                 let m = getMapping TestMap.empty e in
                 writeDeclarations m d;
                 Pretty.fprintf d "(assert ";
@@ -668,7 +674,10 @@ let writeStmts () =
                 writeToFile f tl
         | _ -> ()
     in
-    let f = open_out "branch_statements" in
+    if Sys.file_exists "translation" then rmrf "translation";
+    Unix.umask 0o000;
+    Unix.mkdir "translation" 0o777;
+    let f = open_out "translation/branch_statements" in
     Pretty.fprintf f "Expression, Statement ID, Branch1 Statement ID, Branch2 Statement ID, Function Count (ID)\n";
     writeToFile f !stmts;
     close_out f
