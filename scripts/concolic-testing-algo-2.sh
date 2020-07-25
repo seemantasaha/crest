@@ -1,0 +1,1 @@
+timeout 3600 bash -c "for i in {1..100}; do ../bin/run_crest ./floppy 4000 -random && cat real_coverage >> ~/nrun_floppy_random; done"

@@ -139,10 +139,14 @@ Search::Search(const string& program, int max_iterations)
 
   // Sort the branches.
   sort(branches_.begin(), branches_.end());
+
+  f_cov = fopen("real_coverage", "w");
 }
 
 
-Search::~Search() { }
+Search::~Search() { 
+  fclose(f_cov);
+}
 
 
 void Search::WriteInputToFileOrDie(const string& file,
@@ -245,6 +249,7 @@ bool Search::UpdateCoverage(const SymbolicExecution& ex,
     }
     if ((*i > 0) && !total_covered_[*i]) {
       total_covered_[*i] = true;
+      fprintf(f_cov, "%d\n", *i);
       total_num_covered_++;
     }
   }
@@ -1413,8 +1418,6 @@ BranchSelectivitySearch::~BranchSelectivitySearch() { }
 void BranchSelectivitySearch::Run() {
   SymbolicExecution next_ex;
 
-  int reset_count =0;
-
   while (true) {
     // Execution (on empty/random inputs).
     fprintf(stderr, "RESET\n");
@@ -1427,7 +1430,7 @@ void BranchSelectivitySearch::Run() {
     int count = 0;
     while (count++ < 30) {
       size_t idx;
-      if (SolveSelectiveBranch(&next_input, &idx)) {
+      if (SolveRandomBranch(&next_input, &idx)) {
 
         //increase if the branch has been selected
         size_t b_idx = ex_.path().constraints_idx()[idx];
@@ -1707,6 +1710,8 @@ bool BranchSelectivitySearch::SolveSelectiveBranch(vector<value_t>* next_input, 
 BranchSelectivityCFDSearch::BranchSelectivityCFDSearch(const string& program, int max_iterations)
   : Search(program, max_iterations),
     cfg_(max_branch_), cfg_rev_(max_branch_), dist_(max_branch_) {
+
+    max_iter = max_iterations;  
     for (size_t i = 0; i < paired_branch_.size(); i++) {
       branch_id_t bid = paired_branch_[i];
       coverage_reward_map.insert(make_pair(bid,0));
@@ -1744,6 +1749,7 @@ void BranchSelectivityCFDSearch::Run() {
   SymbolicExecution ex;
   SymbolicExecution next_ex;
 
+  int total_iter = 0;
   while (true) {
     // Execution (on empty/random inputs).
     fprintf(stderr, "RESET\n");
@@ -1762,23 +1768,23 @@ void BranchSelectivityCFDSearch::Run() {
       // For each symbolic branch/constraint in the execution path, we will
       // compute a heuristic score, and then attempt to force the branches
       // in order of increasing score.
-      vector<ScoredBranch> scoredBranches(ex_.path().constraints().size());
-      for (size_t i = 0; i < scoredBranches.size(); i++) {
-        scoredBranches[i].first = i;
-      }
+      // vector<ScoredBranch> scoredBranches(ex_.path().constraints().size());
+      // for (size_t i = 0; i < scoredBranches.size(); i++) {
+      //   scoredBranches[i].first = i;
+      // }
 
-      { // Compute the scores.
-        random_shuffle(scoredBranches.begin(), scoredBranches.end());
-        map<branch_id_t,int> seen;
-        for (size_t i = 0; i < scoredBranches.size(); i++) {
-          size_t idx = scoredBranches[i].first;
-          size_t branch_idx = ex_.path().constraints_idx()[idx];
-          branch_id_t bid = paired_branch_[ex_.path().branches()[branch_idx]];
+      // { // Compute the scores.
+      //   random_shuffle(scoredBranches.begin(), scoredBranches.end());
+      //   map<branch_id_t,int> seen;
+      //   for (size_t i = 0; i < scoredBranches.size(); i++) {
+      //     size_t idx = scoredBranches[i].first;
+      //     size_t branch_idx = ex_.path().constraints_idx()[idx];
+      //     branch_id_t bid = paired_branch_[ex_.path().branches()[branch_idx]];
 
-          scoredBranches[i].second = dist_[bid] + seen[bid];
-          seen[bid] += 1;
-        }
-      }
+      //     scoredBranches[i].second = dist_[bid] + seen[bid];
+      //     seen[bid] += 1;
+      //   }
+      // }
 
 
       size_t idx;
@@ -1811,13 +1817,13 @@ void BranchSelectivityCFDSearch::Run() {
 
         // If we reached here, we will try to solve using control flow direction
         // -> If we reached here, then scoredBranches[i].second is greater than 0.
-        if ((dist_[bid] > 0) &&
-            SolveAlongCfg(b_idx, scoredBranches[idx].second-1, next_ex)) {
-        }
+        // if ((dist_[bid] > 0) &&
+        //     SolveAlongCfg(b_idx, scoredBranches[idx].second-1, next_ex)) {
+        // }
 
-        if (found_new_branch) {
-          ex_.Swap(next_ex);
-        }
+        // if (found_new_branch) {
+        //   ex_.Swap(next_ex);
+        // }
 
         if(!found_new_branch) {
           //negatively reward the branch paired for force execution
@@ -1828,14 +1834,59 @@ void BranchSelectivityCFDSearch::Run() {
         UpdateBranchDistances();
 
       }
+      
+      if(total_iter > max_iter/2)
+        break;
+
+      total_iter++;
     }
+    if(total_iter > max_iter/2)
+      break;
+
+    total_iter++;
+  }
+
+  cout << "\n\n\n\n\n----------------CFDS Starts--------------------------\n\n\n\n\n";
+
+  while (true) {
+    covered_.assign(max_branch_, false);
+    num_covered_ = 0;
+
+    // Execution on empty/random inputs.
+    fprintf(stderr, "RESET\n");
+
+    RunProgram(vector<value_t>(), &ex);
+    if (UpdateCoverage(ex)) {
+      UpdateBranchDistances();
+    }
+
+    // while (DoSearch(3, 200, 0, kInfiniteDistance+10, ex)) {
+    while (DoSearch(5, 30, 0, kInfiniteDistance, ex)) {
+    // while (DoSearch(3, 10000, 0, kInfiniteDistance, ex)) {
+      // As long as we keep finding new branches . . . .
+      UpdateBranchDistances();
+      ex.Swap(success_ex_);
+
+      if(total_iter > max_iter)
+        break;
+
+      total_iter++;
+    }
+
+    if(total_iter > max_iter)
+      break;
+
+    total_iter++;
   }
 }
 
 void BranchSelectivityCFDSearch::UpdateBranchDistances() {
   // We run a BFS backward, starting simultaneously at all uncovered vertices.
   queue<branch_id_t> Q;
-  for (BranchIt i = branches_.begin(); i != branches_.end(); ++i) {
+  cout << "\n\nBranch Coverage Updates:\n"; 
+  for (BranchIt i = branches_.begin(); i != branches_.end(); ++i) {if (*i > 0) 
+    if (*i > 0 && covered_[*i]) 
+      cout << "Branch ID: " << *i << ", Covered: " << covered_[*i] << endl;
     if (!covered_[*i]) {
       dist_[*i] = 0;
       Q.push(*i);
@@ -1843,6 +1894,7 @@ void BranchSelectivityCFDSearch::UpdateBranchDistances() {
       dist_[*i] = kInfiniteDistance;
     }
   }
+  cout << endl << endl;
 
   while (!Q.empty()) {
     branch_id_t i = Q.front();
@@ -2200,6 +2252,210 @@ bool BranchSelectivityCFDSearch::SolveSelectiveBranch(vector<value_t>* next_inpu
   return false;
 }
 
+bool BranchSelectivityCFDSearch::DoSearch(int depth,
+          int iters,
+          int pos,
+          int maxDist,
+          const SymbolicExecution& prev_ex) {
+
+  fprintf(stderr, "DoSearch(%d, %d, %d, %zu)\n",
+    depth, pos, maxDist, prev_ex.path().branches().size());
+
+  if (pos >= static_cast<int>(prev_ex.path().constraints().size()))
+    return false;
+
+  if (depth == 0)
+    return false;
+
+
+  for (size_t i = 0; i < prev_ex.path().constraints().size(); i++) {
+
+    // TODO: print symbolic expression for negated branch condition
+    string branch_exp = "";
+    prev_ex.path().constraints()[i]->Negate();
+    prev_ex.path().constraints()[i]->AppendToString(&branch_exp);
+    cout << "Negated Branch Constraints: " << branch_exp << endl;
+    prev_ex.path().constraints()[i]->Negate();
+  }
+
+
+  // For each symbolic branch/constraint in the execution path, we will
+  // compute a heuristic score, and then attempt to force the branches
+  // in order of increasing score.
+  vector<ScoredBranch> scoredBranches(prev_ex.path().constraints().size() - pos);
+  for (size_t i = 0; i < scoredBranches.size(); i++) {
+    scoredBranches[i].first = i + pos;
+  }
+
+  { // Compute (and sort by) the scores.
+    random_shuffle(scoredBranches.begin(), scoredBranches.end());
+    map<branch_id_t,int> seen;
+    for (size_t i = 0; i < scoredBranches.size(); i++) {
+      size_t idx = scoredBranches[i].first;
+      size_t branch_idx = prev_ex.path().constraints_idx()[idx];
+      branch_id_t bid = paired_branch_[prev_ex.path().branches()[branch_idx]];
+
+      cout << "Branch ID: " << bid << ", Dist: " << dist_[bid] << ", Seen: " << seen[bid] << endl;
+      scoredBranches[i].second = dist_[bid] + seen[bid];
+      seen[bid] += 1;
+    }
+  }
+  stable_sort(scoredBranches.begin(), scoredBranches.end(), ScoredBranchComp());
+
+  // Solve.
+  SymbolicExecution cur_ex;
+  vector<value_t> input;
+  for (size_t i = 0; i < scoredBranches.size(); i++) {
+    if ((iters <= 0) || (scoredBranches[i].second > maxDist))
+      return false;
+
+    string branch_exp = "";
+    prev_ex.path().constraints()[scoredBranches[i].first]->Negate();
+    prev_ex.path().constraints()[scoredBranches[i].first]->AppendToString(&branch_exp);
+    cout << "Negated Selected Branch Constraints: " << branch_exp << endl;
+    prev_ex.path().constraints()[scoredBranches[i].first]->Negate();
+
+
+    if (!SolveAtBranch(prev_ex, scoredBranches[i].first, &input)) {
+      continue;
+    }
+
+    RunProgram(input, &cur_ex);
+    iters--;
+
+    size_t b_idx = prev_ex.path().constraints_idx()[scoredBranches[i].first];
+    branch_id_t bid = paired_branch_[prev_ex.path().branches()[b_idx]];
+    set<branch_id_t> new_branches;
+    bool found_new_branch = UpdateCoverage(cur_ex, &new_branches);
+    bool prediction_failed = !CheckPrediction(prev_ex, cur_ex, b_idx);
+
+
+    if (found_new_branch && prediction_failed) {
+      fprintf(stderr, "Prediction failed.\n");
+      fprintf(stderr, "Found new branch by forcing at "
+                "distance %zu (%d) [lucky, pred failed].\n",
+        dist_[bid], scoredBranches[i].second);
+
+      // We got lucky, and can't really compute any further stats
+      // because prediction failed.
+      success_ex_.Swap(cur_ex);
+      return true;
+    }
+
+    if (found_new_branch && !prediction_failed) {
+      fprintf(stderr, "Found new branch by forcing at distance %zu (%d).\n",
+        dist_[bid], scoredBranches[i].second);
+      size_t min_dist = MinCflDistance(b_idx, cur_ex, new_branches);
+      // Check if we were lucky.
+      if (FindAlongCfg(b_idx, dist_[bid], cur_ex, new_branches)) {
+        assert(min_dist <= dist_[bid]);
+        success_ex_.Swap(cur_ex);
+        return true;
+      } else {
+        // We got lucky, but as long as there were no prediction failures,
+        // we'll finish the CFG search to see if that works, too.
+        assert(min_dist > dist_[bid]);
+        assert(dist_[bid] != 0);
+      }
+    }
+
+    if (prediction_failed) {
+      fprintf(stderr, "Prediction failed.\n");
+      if (!found_new_branch) {
+        continue;
+      }
+    }
+
+    // If we reached here, then scoredBranches[i].second is greater than 0.
+    if ((dist_[bid] > 0) &&
+        SolveAlongCfg(b_idx, scoredBranches[i].second-1, cur_ex)) {
+      return true;
+    }
+
+    if (found_new_branch) {
+      success_ex_.Swap(cur_ex);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool BranchSelectivityCFDSearch::FindAlongCfg(size_t i, unsigned int dist,
+              const SymbolicExecution& ex,
+              const set<branch_id_t>& bs) {
+
+  const vector<branch_id_t>& path = ex.path().branches();
+
+  if (i >= path.size())
+    return false;
+
+  branch_id_t bid = path[i];
+  if (bs.find(bid) != bs.end())
+    return true;
+
+  if (dist == 0)
+    return false;
+
+  // Compute the indices of all branches on the path that immediately
+  // follow the current branch (corresponding to the i-th constraint)
+  // in the CFG. For example, consider the path:
+  //     * ( ( ( 1 2 ) 4 ) ( 5 ( 6 7 ) ) 8 ) 9
+  // where '*' is the current branch.  The branches immediately
+  // following '*' are : 1, 4, 5, 8, and 9.
+  vector<size_t> idxs;
+  { size_t pos = i + 1;
+    CollectNextBranches(path, &pos, &idxs);
+  }
+
+  for (vector<size_t>::const_iterator j = idxs.begin(); j != idxs.end(); ++j) {
+    if (FindAlongCfg(*j, dist-1, ex, bs))
+      return true;
+  }
+
+  return false;
+}
+
+size_t BranchSelectivityCFDSearch::MinCflDistance
+(size_t i, const SymbolicExecution& ex, const set<branch_id_t>& bs) {
+
+  const vector<branch_id_t>& p = ex.path().branches();
+
+  if (i >= p.size())
+    return numeric_limits<size_t>::max();
+
+  if (bs.find(p[i]) != bs.end())
+    return 0;
+
+  vector<size_t> stack;
+  size_t min_dist = numeric_limits<size_t>::max();
+  size_t cur_dist = 1;
+
+  fprintf(stderr, "Found uncovered branches at distances:");
+  for (BranchIt j = p.begin()+i+1; j != p.end(); ++j) {
+    if (bs.find(*j) != bs.end()) {
+      min_dist = min(min_dist, cur_dist);
+      fprintf(stderr, " %zu", cur_dist);
+    }
+
+    if (*j >= 0) {
+      cur_dist++;
+    } else if (*j == kCallId) {
+      stack.push_back(cur_dist);
+    } else if (*j == kReturnId) {
+      if (stack.size() == 0)
+  break;
+      cur_dist = stack.back();
+      stack.pop_back();
+    } else {
+      fprintf(stderr, "\nBad branch id: %d\n", *j);
+      exit(1);
+    }
+  }
+
+  fprintf(stderr, "\n");
+  return min_dist;
+}
 
 
 }  // namespace crest

@@ -43,6 +43,7 @@ class Search {
   virtual void Run() = 0;
 
  protected:
+  FILE* f_cov;
   vector<branch_id_t> branches_;
   vector<branch_id_t> paired_branch_;
   vector<function_id_t> branch_function_;
@@ -307,6 +308,7 @@ class BranchSelectivitySearch : public Search {
 
 class BranchSelectivityCFDSearch : public Search {
  public:
+  int max_iter;
   map<branch_id_t,double> coverage_reward_map;
   map<string,double> branch_prob_map;
   map<string,double> branch_count_map;
