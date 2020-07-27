@@ -26,6 +26,8 @@
 #include "base/basic_types.h"
 #include "base/symbolic_execution.h"
 
+#include <abc/Driver.h>
+
 using std::map;
 using std::vector;
 using __gnu_cxx::hash_map;
@@ -41,6 +43,7 @@ class Search {
   virtual void Run() = 0;
 
  protected:
+  FILE* f_cov;
   vector<branch_id_t> branches_;
   vector<branch_id_t> paired_branch_;
   vector<function_id_t> branch_function_;
@@ -228,6 +231,7 @@ class CfgHeuristicSearch : public Search {
   vector<nbhr_list_t> cfg_;
   vector<nbhr_list_t> cfg_rev_;
   vector<size_t> dist_;
+  vector<size_t> branch_selectivity_;
 
   static const size_t kInfiniteDistance = 10000;
 
@@ -276,6 +280,11 @@ class CfgHeuristicSearch : public Search {
   size_t MinCflDistance(size_t i,
 			const SymbolicExecution& ex,
 			const set<branch_id_t>& bs);
+
+  Vlab::Theory::BigInteger GetModelCount(string constraint, int bound);
+
+  int GetBranchSelectivity(double count, int num_var, int bound);
+
 };
 
 }  // namespace crest

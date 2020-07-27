@@ -19,10 +19,15 @@
 #include <queue>
 #include <utility>
 
+#include <fstream>
+#include <streambuf>
+
 #include "base/yices_solver.h"
 #include "run_crest/concolic_search.h"
 
 using std::binary_function;
+using std::cout;
+using std::endl;
 using std::ifstream;
 using std::ios;
 using std::min;
@@ -134,10 +139,14 @@ Search::Search(const string& program, int max_iterations)
 
   // Sort the branches.
   sort(branches_.begin(), branches_.end());
+
+  f_cov = fopen("real_coverage", "w");
 }
 
 
-Search::~Search() { }
+Search::~Search() { 
+  fclose(f_cov);
+}
 
 
 void Search::WriteInputToFileOrDie(const string& file,
@@ -230,20 +239,20 @@ bool Search::UpdateCoverage(const SymbolicExecution& ex,
       covered_[*i] = true;
       num_covered_++;
       if (new_branches) {
-	new_branches->insert(*i);
+        new_branches->insert(*i);
       }
       if (!reached_[branch_function_[*i]]) {
-	reached_[branch_function_[*i]] = true;
-	reachable_functions_ ++;
-	reachable_branches_ += branch_count_[branch_function_[*i]];
+        reached_[branch_function_[*i]] = true;
+        reachable_functions_ ++;
+        reachable_branches_ += branch_count_[branch_function_[*i]];
       }
     }
     if ((*i > 0) && !total_covered_[*i]) {
       total_covered_[*i] = true;
+      fprintf(f_cov, "%d\n", *i);
       total_num_covered_++;
     }
   }
-
   fprintf(stderr, "Iteration %d (%lds): covered %u branches [%u reach funs, %u reach branches].\n",
 	  num_iters_, time(NULL)-start_time_, total_num_covered_, reachable_functions_, reachable_branches_);
 
@@ -858,7 +867,7 @@ bool CfgBaselineSearch::DoSearch(int depth, int iters, int pos,
 CfgHeuristicSearch::CfgHeuristicSearch
 (const string& program, int max_iterations)
   : Search(program, max_iterations),
-    cfg_(max_branch_), cfg_rev_(max_branch_), dist_(max_branch_) {
+    cfg_(max_branch_), cfg_rev_(max_branch_), dist_(max_branch_), branch_selectivity_(max_branch_) {
 
   // Read in the CFG.
   ifstream in("cfg_branches", ios::in | ios::binary);
@@ -882,10 +891,206 @@ CfgHeuristicSearch::CfgHeuristicSearch
       cfg_rev_[*j].push_back(*i);
     }
   }
+
+  //count branch difficulty using constraints andcounting models
+  FILE *file;
+  ifstream br("branches");
+  int bound = 32;
+  for (BranchIt i = branches_.begin(); i != branches_.end(); ++i) {
+    string filename = "branch_" + std::to_string(*i) +  ".smt2";
+    //cout << filename << endl;
+    if (file = fopen(filename.c_str(), "r")) {
+      ifstream in(filename);
+      string constraint((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+
+      string::size_type pos = 0;
+      string target = "bool";
+      if ((pos = constraint.find(target, pos )) != std::string::npos) {
+        //continue;
+        size_t index = 0;
+        while (true) {
+          /* Locate the substring to replace. */
+          index = constraint.find("bool", index);
+          if (index == std::string::npos) break;
+
+          /* Make the replacement. */
+          constraint.replace(index, 4, "Int");
+
+          /* Advance index forward so the next iteration doesn't pick it up as well. */
+          index += 3;
+        }
+      }
+
+      pos = 0;
+      target = "character";
+      if ((pos = constraint.find(target, pos )) != std::string::npos) {
+        //continue;
+        size_t index = 0;
+        while (true) {
+          /* Locate the substring to replace. */
+          index = constraint.find("character", index);
+          if (index == std::string::npos) break;
+
+          /* Make the replacement. */
+          constraint.replace(index, 9, "Int");
+
+          /* Advance index forward so the next iteration doesn't pick it up as well. */
+          index += 3;
+        }
+      }
+
+      pos = 0;
+      target = "0x";
+      if ((pos = constraint.find(target, pos )) != std::string::npos) {
+        continue;
+        // size_t index = 0;
+        // while (true) {
+        //   /* Locate the substring to replace. */
+        //   index = constraint.find("U)", index);
+        //   if (index == std::string::npos) break;
+
+        //   /* Make the replacement. */
+        //   constraint.replace(index, 2, ")");
+
+        //   /* Advance index forward so the next iteration doesn't pick it up as well. */
+        //   index += 1;
+        // }
+      }
+
+      pos = 0;
+      target = "U)";
+      if ((pos = constraint.find(target, pos )) != std::string::npos) {
+        //continue;
+        size_t index = 0;
+        while (true) {
+          /* Locate the substring to replace. */
+          index = constraint.find("U)", index);
+          if (index == std::string::npos) break;
+
+          /* Make the replacement. */
+          constraint.replace(index, 2, ")");
+
+          /* Advance index forward so the next iteration doesn't pick it up as well. */
+          index += 1;
+        }
+      }
+
+      pos = 0;
+      target = "L)";
+      if ((pos = constraint.find(target, pos )) != std::string::npos) {
+        //continue;
+        size_t index = 0;
+        while (true) {
+          /* Locate the substring to replace. */
+          index = constraint.find("L)", index);
+          if (index == std::string::npos) break;
+
+          /* Make the replacement. */
+          constraint.replace(index, 2, ")");
+
+          /* Advance index forward so the next iteration doesn't pick it up as well. */
+          index += 1;
+        }
+      }
+
+      pos = 0;
+      target = "-1";
+      if ((pos = constraint.find(target, pos )) != std::string::npos) {
+        string::size_type p = 0;
+        string t = "L)";
+        if ((p = constraint.find(t, p)) != std::string::npos) {
+          continue;
+        }
+      }
+
+      pos = 0;
+      target = "-1)";
+      if ((pos = constraint.find(target, pos )) != std::string::npos) {
+        //continue;
+        size_t index = 0;
+        while (true) {
+          /* Locate the substring to replace. */
+          index = constraint.find("-1)", index);
+          if (index == std::string::npos) break;
+
+          /* Make the replacement. */
+          constraint.replace(index, 3, "(- 1))");
+
+          /* Advance index forward so the next iteration doesn't pick it up as well. */
+          index += 6;
+        }
+      }
+
+      //cout << constraint << endl;
+
+      int num_var = 0;
+      pos = 0;
+      target = "declare";
+      while ((pos = constraint.find(target, pos )) != std::string::npos) {
+            ++ num_var;
+            pos += target.length();
+      }
+
+      Vlab::Theory::BigInteger model_count = GetModelCount(constraint, bound);
+      //cout << "Branch model count: " << (double)model_count << endl;
+
+      //cout << "Number of variables: " << num_var << endl;
+      branch_selectivity_[*i] = GetBranchSelectivity((double)model_count, num_var, bound);
+
+      int a, b;
+      while (br >> a >> b)
+      {
+          if(a == *i) {
+            branch_selectivity_[b] = 1 - branch_selectivity_[a];
+          }
+      }
+
+
+      //cout << "Branch Selectivity: " << branch_selectivity_[*i] << endl;
+      //cout << "Constraint file exists for branch with id: " << std::to_string(*i) <<endl;
+    } else {
+      //cout << "Constraint file doesn't exist for branch with id: " << std::to_string(*i) <<endl;
+    }
+  }
+  br.close();
 }
 
 
 CfgHeuristicSearch::~CfgHeuristicSearch() { }
+
+
+Vlab::Theory::BigInteger CfgHeuristicSearch::GetModelCount(string constraint, int bound) {
+    Vlab::Driver driver;
+    driver.InitializeLogger(0);
+    driver.set_option(Vlab::Option::Name::REGEX_FLAG, 0x000f);
+    std::istringstream str(constraint);
+    driver.Parse(&str);
+    driver.InitializeSolver();
+    driver.Solve();
+    Vlab::Theory::BigInteger count = driver.CountInts(bound);
+    driver.reset();
+
+    return count;
+}
+
+int CfgHeuristicSearch::GetBranchSelectivity(double count, int num_var, int bound) {  
+  double branch_count, branch_prob;
+
+  branch_count = (double)count;
+  if(num_var == 2 && branch_count == (2 * pow(2,bound))) //checking purpose, comment out later
+    branch_count = 1;
+
+  branch_prob = branch_count/(num_var * (2 * pow(2,bound)));
+
+  //cout << "Branch probability: " << branch_prob << endl;
+
+  int branch_selectivity = 1;
+  if(branch_prob < 0.01){
+    branch_selectivity = 0;
+  }
+
+  return branch_selectivity;
+}
 
 
 void CfgHeuristicSearch::Run() {
@@ -941,7 +1146,7 @@ void CfgHeuristicSearch::UpdateBranchDistances() {
   queue<branch_id_t> Q;
   for (BranchIt i = branches_.begin(); i != branches_.end(); ++i) {
     if (!covered_[*i]) {
-      dist_[*i] = 0;
+      dist_[*i] = 0 + branch_selectivity_[*i];
       Q.push(*i);
     } else {
       dist_[*i] = kInfiniteDistance;

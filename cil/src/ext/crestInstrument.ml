@@ -659,12 +659,12 @@ let writeStmts () =
     let rec writeToFile f ls =
         match ls with
         ((e,s,b1,b2,fc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d\n" d_exp e s b1 b2 fc;
-				let d = open_out ("branch_" ^ (string_of_int s) ^".smt2") in
+				let d = open_out ("branch_" ^ (string_of_int b1) ^".smt2") in
                 let m = getMapping TestMap.empty e in
                 writeDeclarations m d;
                 Pretty.fprintf d "(assert ";
                 printSmt e d m;
-                Pretty.fprintf d ")\n\n(check-sat)\n";  
+                Pretty.fprintf d ")\n\n(check-sat)\n";
                 writeToFile f tl
         | _ -> ()
     in
