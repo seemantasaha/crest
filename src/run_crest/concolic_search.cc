@@ -207,6 +207,9 @@ void Search::RunProgram(const vector<value_t>& inputs, SymbolicExecution* ex) {
     exit(0);
   }
 
+  if (total_num_covered_ >= 250)
+    exit(0);
+
   // Run the program.
   LaunchProgram(inputs);
 
@@ -867,7 +870,7 @@ bool CfgBaselineSearch::DoSearch(int depth, int iters, int pos,
 CfgHeuristicSearch::CfgHeuristicSearch
 (const string& program, int max_iterations)
   : Search(program, max_iterations),
-    cfg_(max_branch_), cfg_rev_(max_branch_), dist_(max_branch_), branch_selectivity_(max_branch_) {
+    cfg_(max_branch_), cfg_rev_(max_branch_), dist_(max_branch_), branch_selectivity_(max_branch_), branch_selectivity_flag_(max_branch_) {
 
   // Read in the CFG.
   ifstream in("cfg_branches", ios::in | ios::binary);
@@ -898,11 +901,12 @@ CfgHeuristicSearch::CfgHeuristicSearch
   int bound = 32;
   for (BranchIt i = branches_.begin(); i != branches_.end(); ++i) {
     string filename = "branch_" + std::to_string(*i) +  ".smt2";
-    //cout << filename << endl;
+    cout << filename << endl;
     if (file = fopen(filename.c_str(), "r")) {
       ifstream in(filename);
       string constraint((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
+      cout << constraint << endl;
       string::size_type pos = 0;
       string target = "bool";
       if ((pos = constraint.find(target, pos )) != std::string::npos) {
@@ -1036,14 +1040,8 @@ CfgHeuristicSearch::CfgHeuristicSearch
 
       //cout << "Number of variables: " << num_var << endl;
       branch_selectivity_[*i] = GetBranchSelectivity((double)model_count, num_var, bound);
+      branch_selectivity_flag_[*i] = 1;
 
-      int a, b;
-      while (br >> a >> b)
-      {
-          if(a == *i) {
-            branch_selectivity_[b] = 1 - branch_selectivity_[a];
-          }
-      }
 
 
       //cout << "Branch Selectivity: " << branch_selectivity_[*i] << endl;
@@ -1052,6 +1050,13 @@ CfgHeuristicSearch::CfgHeuristicSearch
       //cout << "Constraint file doesn't exist for branch with id: " << std::to_string(*i) <<endl;
     }
   }
+int a, b;
+    while (br >> a >> b)
+    {
+      if (branch_selectivity_flag_[a]) {
+        branch_selectivity_[b] = 1 - branch_selectivity_[a];
+      }
+    }
   br.close();
 }
 
@@ -1082,7 +1087,7 @@ int CfgHeuristicSearch::GetBranchSelectivity(double count, int num_var, int boun
 
   branch_prob = branch_count/(num_var * (2 * pow(2,bound)));
 
-  //cout << "Branch probability: " << branch_prob << endl;
+  cout << "Branch probability: " << branch_prob << endl;
 
   int branch_selectivity = 1;
   if(branch_prob < 0.01){
@@ -1146,7 +1151,7 @@ void CfgHeuristicSearch::UpdateBranchDistances() {
   queue<branch_id_t> Q;
   for (BranchIt i = branches_.begin(); i != branches_.end(); ++i) {
     if (!covered_[*i]) {
-      dist_[*i] = 0 + branch_selectivity_[*i];
+      dist_[*i] = branch_selectivity_[*i]; //prioritizing selective branches, increasing distance for non-selective branches
       Q.push(*i);
     } else {
       dist_[*i] = kInfiniteDistance;
@@ -1160,8 +1165,8 @@ void CfgHeuristicSearch::UpdateBranchDistances() {
 
     for (BranchIt j = cfg_rev_[i].begin(); j != cfg_rev_[i].end(); ++j) {
       if (dist_i + 1 < dist_[*j]) {
-	dist_[*j] = dist_i + 1;
-	Q.push(*j);
+    	dist_[*j] = dist_i + 1;
+    	Q.push(*j);
       }
     }
   }
@@ -1224,18 +1229,47 @@ bool CfgHeuristicSearch::DoSearch(int depth,
 
     num_inner_solves_ ++;
 
-    if (!SolveAtBranch(prev_ex, scoredBranches[i].first, &input)) {
-      num_inner_unsats_ ++;
-      continue;
-    }
-
-    RunProgram(input, &cur_ex);
-    iters--;
-
     size_t b_idx = prev_ex.path().constraints_idx()[scoredBranches[i].first];
     branch_id_t bid = paired_branch_[prev_ex.path().branches()[b_idx]];
+
     set<branch_id_t> new_branches;
-    bool found_new_branch = UpdateCoverage(cur_ex, &new_branches);
+    bool found_new_branch;
+
+    // if(branch_selectivity_[bid] == 0) {
+    //   //int random_iter = 10;
+    //   //while(random_iter-- > 0) {
+    //   while(true) {  
+    //     RandomInput(prev_ex.vars(), &input);
+    //     for (size_t index = 0; index < scoredBranches.size(); index++) {
+    //       cout << "input: " << input[index] << endl;
+    //     }
+    //     RunProgram(input, &cur_ex);
+    //     found_new_branch = UpdateCoverage(cur_ex, &new_branches);
+    //     iters--;
+    //     if(found_new_branch) {
+    //       cout << "Found new branches by random testing!!!\n";
+    //       break;
+    //     }
+    //   }
+    // } 
+    // else {
+      if (!SolveAtBranch(prev_ex, scoredBranches[i].first, &input)) {
+        num_inner_unsats_ ++;
+        continue;
+      }
+
+
+      // for (size_t index = 0; index < scoredBranches.size(); index++) {
+      //   cout << "input: " << input[index] << endl;
+      // }
+
+      RunProgram(input, &cur_ex);
+      found_new_branch = UpdateCoverage(cur_ex, &new_branches);
+    //}
+    iters--;
+
+    
+    
     bool prediction_failed = !CheckPrediction(prev_ex, cur_ex, b_idx);
 
 
@@ -1259,29 +1293,29 @@ bool CfgHeuristicSearch::DoSearch(int depth,
       size_t min_dist = MinCflDistance(b_idx, cur_ex, new_branches);
       // Check if we were lucky.
       if (FindAlongCfg(b_idx, dist_[bid], cur_ex, new_branches)) {
-	assert(min_dist <= dist_[bid]);
-	// A legitimate find -- return success.
-	if (dist_[bid] == 0) {
-	  num_inner_zero_successes_ ++;
-	} else {
-	  num_inner_nonzero_successes_ ++;
-	}
-	success_ex_.Swap(cur_ex);
-	return true;
+      	assert(min_dist <= dist_[bid]);
+      	// A legitimate find -- return success.
+      	if (dist_[bid] == 0) {
+      	  num_inner_zero_successes_ ++;
+      	} else {
+      	  num_inner_nonzero_successes_ ++;
+      	}
+      	success_ex_.Swap(cur_ex);
+      	return true;
       } else {
-	// We got lucky, but as long as there were no prediction failures,
-	// we'll finish the CFG search to see if that works, too.
-	assert(min_dist > dist_[bid]);
-	assert(dist_[bid] != 0);
-	num_inner_lucky_successes_ ++;
+      	// We got lucky, but as long as there were no prediction failures,
+      	// we'll finish the CFG search to see if that works, too.
+      	assert(min_dist > dist_[bid]);
+      	assert(dist_[bid] != 0);
+      	num_inner_lucky_successes_ ++;
       }
     }
 
     if (prediction_failed) {
       fprintf(stderr, "Prediction failed.\n");
       if (!found_new_branch) {
-	num_inner_pred_fails_ ++;
-	continue;
+      	num_inner_pred_fails_ ++;
+      	continue;
       }
     }
 
@@ -1306,6 +1340,7 @@ bool CfgHeuristicSearch::DoSearch(int depth,
     }
     */
   }
+  //exit(0);
 
   return false;
 }

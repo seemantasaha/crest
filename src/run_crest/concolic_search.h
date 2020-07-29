@@ -232,6 +232,7 @@ class CfgHeuristicSearch : public Search {
   vector<nbhr_list_t> cfg_rev_;
   vector<size_t> dist_;
   vector<size_t> branch_selectivity_;
+  vector<int> branch_selectivity_flag_;
 
   static const size_t kInfiniteDistance = 10000;
 
