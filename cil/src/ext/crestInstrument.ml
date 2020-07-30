@@ -521,7 +521,7 @@ let writeStmts () =
                                                                     Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 255)))\n" n n
                                                          | IBool -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 1)))\n" n n
                                                          | IInt -> Pretty.fprintf f "(assert (and (>= x%d (- 2147483648)) (<= x%d 2147483647)))\n" n n
-                                                         | IUInt -> Pretty.fprintf f "(assert (and (>= x%d 0) (x%d <= 4294967295)))\n" n n
+                                                         | IUInt -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 4294967295)))\n" n n
                                                          | IShort -> Pretty.fprintf f "(assert (and (>= x%d (- 32768)) (<= x%d 32767)))\n" n n
                                                          | IUShort -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 65535)))\n" n n
                                                          | ILong -> Pretty.fprintf f "(assert (and (>= x%d (-2147483648)) (<= x%d 2147483647)))\n" n n
