@@ -16,11 +16,11 @@ extern void __CrestApply1(int id , int op , long long val ) __attribute__((__cre
 extern void __CrestClearStack(int id ) __attribute__((__crest_skip__)) ;
 extern void __CrestStore(int id , unsigned long addr ) __attribute__((__crest_skip__)) ;
 extern void __CrestLoad(int id , unsigned long addr , long long val ) __attribute__((__crest_skip__)) ;
-# 209 "/usr/lib/gcc/x86_64-linux-gnu/9/include/stddef.h"
+# 212 "/usr/lib/gcc/x86_64-linux-gnu/4.8/include/stddef.h"
 typedef unsigned long size_t;
-# 152 "/usr/include/x86_64-linux-gnu/bits/types.h"
+# 140 "/usr/include/x86_64-linux-gnu/bits/types.h"
 typedef long __off_t;
-# 153 "/usr/include/x86_64-linux-gnu/bits/types.h"
+# 141 "/usr/include/x86_64-linux-gnu/bits/types.h"
 typedef long __off64_t;
 # 4 "/usr/include/x86_64-linux-gnu/bits/types/__FILE.h"
 struct _IO_FILE;
@@ -30,23 +30,17 @@ struct _IO_FILE;
 struct _IO_FILE;
 # 7 "/usr/include/x86_64-linux-gnu/bits/types/FILE.h"
 typedef struct _IO_FILE FILE;
-# 35 "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h"
+# 149 "/usr/include/x86_64-linux-gnu/bits/libio.h"
 struct _IO_FILE;
-# 36 "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h"
-struct _IO_marker;
-# 36 "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h"
-struct _IO_marker;
-# 37 "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h"
-struct _IO_codecvt;
-# 37 "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h"
-struct _IO_codecvt;
-# 38 "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h"
-struct _IO_wide_data;
-# 38 "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h"
-struct _IO_wide_data;
-# 43 "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h"
+# 154 "/usr/include/x86_64-linux-gnu/bits/libio.h"
 typedef void _IO_lock_t;
-# 49 "/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h"
+# 160 "/usr/include/x86_64-linux-gnu/bits/libio.h"
+struct _IO_marker {
+   struct _IO_marker *_next ;
+   struct _IO_FILE *_sbuf ;
+   int _pos ;
+};
+# 245 "/usr/include/x86_64-linux-gnu/bits/libio.h"
 struct _IO_FILE {
    int _flags ;
    char *_IO_read_ptr ;
@@ -70,19 +64,19 @@ struct _IO_FILE {
    char _shortbuf[1] ;
    _IO_lock_t *_lock ;
    __off64_t _offset ;
-   struct _IO_codecvt *_codecvt ;
-   struct _IO_wide_data *_wide_data ;
-   struct _IO_FILE *_freeres_list ;
-   void *_freeres_buf ;
+   void *__pad1 ;
+   void *__pad2 ;
+   void *__pad3 ;
+   void *__pad4 ;
    size_t __pad5 ;
    int _mode ;
    char _unused2[(15UL * sizeof(int ) - 4UL * sizeof(void *)) - sizeof(size_t )] ;
 };
 # 202 "../bin/../include/crest.h"
 extern void __CrestInt(int *x ) __attribute__((__crest_skip__)) ;
-# 139 "/usr/include/stdio.h"
-extern FILE *stderr ;
-# 326 "/usr/include/stdio.h"
+# 137 "/usr/include/stdio.h"
+extern struct _IO_FILE *stderr ;
+# 312 "/usr/include/stdio.h"
 extern int fprintf(FILE * __restrict __stream , char const * __restrict __format
                    , ...) ;
 # 15 "uniform_test.c"
