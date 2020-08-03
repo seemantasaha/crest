@@ -231,7 +231,8 @@ class CfgHeuristicSearch : public Search {
   vector<nbhr_list_t> cfg_;
   vector<nbhr_list_t> cfg_rev_;
   vector<size_t> dist_;
-  vector<size_t> branch_selectivity_;
+  vector<int> branch_selectivity_;
+  vector<double> branch_probability_;
   vector<int> branch_selectivity_flag_;
 
   static const size_t kInfiniteDistance = 10000;
@@ -239,6 +240,9 @@ class CfgHeuristicSearch : public Search {
   int iters_left_;
 
   SymbolicExecution success_ex_;
+
+  unsigned num_selective_branches_;
+  unsigned num_nonselective_branches_;
 
   // Stats.
   unsigned num_inner_solves_;
@@ -262,6 +266,7 @@ class CfgHeuristicSearch : public Search {
   unsigned num_solve_all_concrete_;
   unsigned num_solve_no_paths_;
 
+  void UpdateBranchSelectivity();
   void UpdateBranchDistances();
   void PrintStats();
   bool DoSearch(int depth, int iters, int pos, int maxDist, const SymbolicExecution& prev_ex);
@@ -285,6 +290,8 @@ class CfgHeuristicSearch : public Search {
   Vlab::Theory::BigInteger GetModelCount(string constraint, int bound);
 
   int GetBranchSelectivity(double count, int num_var, int bound);
+
+  double GetBranchProbability(double count, int num_var, int bound);
 
 };
 

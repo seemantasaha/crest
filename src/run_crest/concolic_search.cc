@@ -208,7 +208,7 @@ void Search::RunProgram(const vector<value_t>& inputs, SymbolicExecution* ex) {
   }
 
   if (total_num_covered_ >= 250)
-    exit(0);
+   exit(0);
 
   // Run the program.
   LaunchProgram(inputs);
@@ -264,6 +264,7 @@ bool Search::UpdateCoverage(const SymbolicExecution& ex,
     WriteCoverageToFileOrDie("coverage");
   }
 
+  cout << num_covered_ << " > " << prev_covered_ << endl;
   return found_new_branch;
 }
 
@@ -870,7 +871,7 @@ bool CfgBaselineSearch::DoSearch(int depth, int iters, int pos,
 CfgHeuristicSearch::CfgHeuristicSearch
 (const string& program, int max_iterations)
   : Search(program, max_iterations),
-    cfg_(max_branch_), cfg_rev_(max_branch_), dist_(max_branch_), branch_selectivity_(max_branch_), branch_selectivity_flag_(max_branch_) {
+    cfg_(max_branch_), cfg_rev_(max_branch_), dist_(max_branch_), branch_probability_(max_branch_), branch_selectivity_(max_branch_), branch_selectivity_flag_(max_branch_) {
 
   // Read in the CFG.
   ifstream in("cfg_branches", ios::in | ios::binary);
@@ -1040,6 +1041,9 @@ CfgHeuristicSearch::CfgHeuristicSearch
 
       //cout << "Number of variables: " << num_var << endl;
       branch_selectivity_[*i] = GetBranchSelectivity((double)model_count, num_var, bound);
+
+      branch_probability_[*i] = GetBranchProbability((double)model_count, num_var, bound);
+
       branch_selectivity_flag_[*i] = 1;
 
 
@@ -1050,14 +1054,38 @@ CfgHeuristicSearch::CfgHeuristicSearch
       //cout << "Constraint file doesn't exist for branch with id: " << std::to_string(*i) <<endl;
     }
   }
-int a, b;
-    while (br >> a >> b)
-    {
-      if (branch_selectivity_flag_[a]) {
-        branch_selectivity_[b] = 1 - branch_selectivity_[a];
-      }
+  int a, b;
+  while (br >> a >> b)
+  {
+    if (branch_selectivity_flag_[a]) {
+      branch_selectivity_[b] = 1 - branch_selectivity_[a];
+      branch_probability_[b] = 1.0 - branch_probability_[a];
+      cout << a << " " << b << endl;
+      cout << branch_probability_[a] << " " << branch_probability_[b] << endl;
     }
+  }
   br.close();
+
+  queue<branch_id_t> Q;
+  for (BranchIt i = branches_.begin(); i != branches_.end(); ++i) {
+    Q.push(*i);
+  }
+
+  while (!Q.empty()) {
+    branch_id_t bid = Q.front();
+    Q.pop();
+
+    if(branch_selectivity_[bid] == 1) {
+      for (BranchIt j = cfg_[bid].begin(); j != cfg_[bid].end(); ++j) {
+        branch_selectivity_[*j] = 1;
+      }
+    } 
+  }
+
+
+  // for (BranchIt i = branches_.begin(); i != branches_.end(); ++i) {
+  //   cout << *i << "->" << branch_selectivity_[*i] << endl;
+  // }
 }
 
 
@@ -1079,51 +1107,140 @@ Vlab::Theory::BigInteger CfgHeuristicSearch::GetModelCount(string constraint, in
 }
 
 int CfgHeuristicSearch::GetBranchSelectivity(double count, int num_var, int bound) {  
-  double branch_count, branch_prob;
-
-  branch_count = (double)count;
-  if(num_var == 2 && branch_count == (2 * pow(2,bound))) //checking purpose, comment out later
-    branch_count = 1;
-
-  branch_prob = branch_count/(num_var * (2 * pow(2,bound)));
-
+  double branch_prob = GetBranchProbability(count, num_var, bound);
   cout << "Branch probability: " << branch_prob << endl;
-
-  int branch_selectivity = 1;
+  int branch_selectivity = 0;
   if(branch_prob < 0.01){
-    branch_selectivity = 0;
+    branch_selectivity = 1;
   }
 
   return branch_selectivity;
 }
 
 
+double CfgHeuristicSearch::GetBranchProbability(double count, int num_var, int bound) {  
+  double branch_count, branch_prob;
+
+  branch_count = (double)count;
+  cout << num_var << endl;
+  if(num_var > 1) {
+    double vc = pow(2,(bound+1)*(num_var-1));
+    cout << vc << endl;
+    if(branch_count == vc) {//checking purpose, comment out later
+      cout << "special case for selectivity calculation!!!\n";
+      branch_count = 1;
+    }
+  }
+
+  branch_prob = branch_count/pow(2,(bound+1)*num_var);
+
+  return branch_prob;
+}
+
+
 void CfgHeuristicSearch::Run() {
   set<branch_id_t> newly_covered_;
+  vector<SymbolicExecution> randomly_generated_ex_vector_;
+  vector<vector<value_t>> random_inputs_;
   SymbolicExecution ex;
+  SymbolicExecution ran_ex;
 
+  int rt_thresh_const = 10;
+
+  covered_.assign(max_branch_, false);
+  num_covered_ = 0;    
+
+  UpdateBranchSelectivity();
+  UpdateBranchDistances();
+  
+  int rt_counter = num_nonselective_branches_ * rt_thresh_const;
   while (true) {
-    covered_.assign(max_branch_, false);
-    num_covered_ = 0;
 
-    // Execution on empty/random inputs.
-    fprintf(stderr, "RESET\n");
-    RunProgram(vector<value_t>(), &ex);
-    if (UpdateCoverage(ex)) {
-      UpdateBranchDistances();
-      PrintStats();
+    cout << "Random testing counter: " << rt_counter << endl;
+
+    while(rt_counter-- > 0) {
+      cout << "\n\n\nRandom testing selected...\n\n\n";
+      set<branch_id_t> new_branches;
+      bool found_new_branch = false;
+      vector<value_t> input;
+
+      RandomInput(ran_ex.vars(), &input);
+      RunProgram(input, &ran_ex);
+      found_new_branch = UpdateCoverage(ran_ex, &new_branches);
+      if(found_new_branch) {
+        cout << "New branches found by random testing\n";
+        //randomly_generated_ex_vector_.push_back(ran_ex);
+        random_inputs_.push_back(input);
+        cout << "pushed\n";
+        cout << "Size:" << random_inputs_.size() << "\n";
+        UpdateBranchDistances();
+        UpdateBranchSelectivity();
+      } 
     }
 
-    // while (DoSearch(3, 200, 0, kInfiniteDistance+10, ex)) {
-    while (DoSearch(5, 30, 0, kInfiniteDistance, ex)) {
-    // while (DoSearch(3, 10000, 0, kInfiniteDistance, ex)) {
+    // for (vector<vector<value_t>>::const_iterator i = random_inputs_.begin(); i != random_inputs_.end(); ++i) {
+    //   vector<value_t> input = *i;
+    //   cout << "Size:" << input.size() << "\n";
+    //   for (auto j = input.begin(); j != input.end(); ++j) {
+    //     cout << *j << " ";
+    //   }
+    //   cout << endl;
+    // }
+
+    while (true) {
+      covered_.assign(max_branch_, false);
+      num_covered_ = 0;
+
+      // Execution on empty/random inputs.
+      fprintf(stderr, "RESET\n");
+      int random_index = rand() % random_inputs_.size();
+      cout << "\n\n\nSelected Random Index: " << random_index << endl << endl;
+      vector<value_t> input = random_inputs_[random_index];
+      RunProgram(input, &ex);
+      if (UpdateCoverage(ex)) {
+        UpdateBranchDistances();
+        PrintStats();
+      }
+
+      // while (DoSearch(3, 200, 0, kInfiniteDistance+10, ex)) {
+      while (DoSearch(5, 30, 0, kInfiniteDistance, ex)) {
+      // while (DoSearch(3, 10000, 0, kInfiniteDistance, ex)) {
+        PrintStats();
+        // As long as we keep finding new branches . . . .
+        UpdateBranchDistances();
+        ex.Swap(success_ex_);
+      }
       PrintStats();
-      // As long as we keep finding new branches . . . .
-      UpdateBranchDistances();
-      ex.Swap(success_ex_);
     }
-    PrintStats();
   }
+}
+
+
+void CfgHeuristicSearch::UpdateBranchSelectivity() {
+  num_selective_branches_ = 0;
+  num_nonselective_branches_ = 0;
+  for (BranchIt i = branches_.begin(); i != branches_.end(); ++i) {
+    if (covered_[*i]) {
+      branch_selectivity_[*i] = -1;
+    } else {
+      if(branch_selectivity_[*i] == 1) {
+        num_selective_branches_++;
+      }
+      if(branch_selectivity_[*i] == 0) {
+        num_nonselective_branches_++;
+      }
+    }
+  }
+
+
+
+
+  // for (BranchIt i = branches_.begin(); i != branches_.end(); ++i) {
+  //   cout << *i << "->" << branch_selectivity_[*i] << endl;
+  // }
+
+  cout << "Number of Selective branches: " << num_selective_branches_ << endl;
+  cout << "Number of Non-Selective branches: " << num_nonselective_branches_ << endl;
 }
 
 
@@ -1151,7 +1268,7 @@ void CfgHeuristicSearch::UpdateBranchDistances() {
   queue<branch_id_t> Q;
   for (BranchIt i = branches_.begin(); i != branches_.end(); ++i) {
     if (!covered_[*i]) {
-      dist_[*i] = branch_selectivity_[*i]; //prioritizing selective branches, increasing distance for non-selective branches
+      dist_[*i] = 0;
       Q.push(*i);
     } else {
       dist_[*i] = kInfiniteDistance;
@@ -1161,12 +1278,14 @@ void CfgHeuristicSearch::UpdateBranchDistances() {
   while (!Q.empty()) {
     branch_id_t i = Q.front();
     size_t dist_i = dist_[i];
+    //double branch_prob_i = branch_probability_[i];
     Q.pop();
 
     for (BranchIt j = cfg_rev_[i].begin(); j != cfg_rev_[i].end(); ++j) {
       if (dist_i + 1 < dist_[*j]) {
-    	dist_[*j] = dist_i + 1;
-    	Q.push(*j);
+      	dist_[*j] = dist_i + 1;
+        //branch_probability_[*j] = branch_prob_i * branch_probability_[*j];
+      	Q.push(*j);
       }
     }
   }
@@ -1174,13 +1293,13 @@ void CfgHeuristicSearch::UpdateBranchDistances() {
 
 
 bool CfgHeuristicSearch::DoSearch(int depth,
-				  int iters,
-				  int pos,
-				  int maxDist,
-				  const SymbolicExecution& prev_ex) {
+          int iters,
+          int pos,
+          int maxDist,
+          const SymbolicExecution& prev_ex) {
 
   fprintf(stderr, "DoSearch(%d, %d, %d, %zu)\n",
-	  depth, pos, maxDist, prev_ex.path().branches().size());
+    depth, pos, maxDist, prev_ex.path().branches().size());
 
   if (pos >= static_cast<int>(prev_ex.path().constraints().size()))
     return false;
@@ -1229,55 +1348,26 @@ bool CfgHeuristicSearch::DoSearch(int depth,
 
     num_inner_solves_ ++;
 
-    size_t b_idx = prev_ex.path().constraints_idx()[scoredBranches[i].first];
-    branch_id_t bid = paired_branch_[prev_ex.path().branches()[b_idx]];
+    if (!SolveAtBranch(prev_ex, scoredBranches[i].first, &input)) {
+      num_inner_unsats_ ++;
+      continue;
+    }
 
-    set<branch_id_t> new_branches;
-    bool found_new_branch;
-
-    // if(branch_selectivity_[bid] == 0) {
-    //   //int random_iter = 10;
-    //   //while(random_iter-- > 0) {
-    //   while(true) {  
-    //     RandomInput(prev_ex.vars(), &input);
-    //     for (size_t index = 0; index < scoredBranches.size(); index++) {
-    //       cout << "input: " << input[index] << endl;
-    //     }
-    //     RunProgram(input, &cur_ex);
-    //     found_new_branch = UpdateCoverage(cur_ex, &new_branches);
-    //     iters--;
-    //     if(found_new_branch) {
-    //       cout << "Found new branches by random testing!!!\n";
-    //       break;
-    //     }
-    //   }
-    // } 
-    // else {
-      if (!SolveAtBranch(prev_ex, scoredBranches[i].first, &input)) {
-        num_inner_unsats_ ++;
-        continue;
-      }
-
-
-      // for (size_t index = 0; index < scoredBranches.size(); index++) {
-      //   cout << "input: " << input[index] << endl;
-      // }
-
-      RunProgram(input, &cur_ex);
-      found_new_branch = UpdateCoverage(cur_ex, &new_branches);
-    //}
+    RunProgram(input, &cur_ex);
     iters--;
 
-    
-    
+    size_t b_idx = prev_ex.path().constraints_idx()[scoredBranches[i].first];
+    branch_id_t bid = paired_branch_[prev_ex.path().branches()[b_idx]];
+    set<branch_id_t> new_branches;
+    bool found_new_branch = UpdateCoverage(cur_ex, &new_branches);
     bool prediction_failed = !CheckPrediction(prev_ex, cur_ex, b_idx);
 
 
     if (found_new_branch && prediction_failed) {
       fprintf(stderr, "Prediction failed.\n");
       fprintf(stderr, "Found new branch by forcing at "
-	              "distance %zu (%d) [lucky, pred failed].\n",
-	      dist_[bid], scoredBranches[i].second);
+                "distance %zu (%d) [lucky, pred failed].\n",
+        dist_[bid], scoredBranches[i].second);
 
       // We got lucky, and can't really compute any further stats
       // because prediction failed.
@@ -1289,33 +1379,33 @@ bool CfgHeuristicSearch::DoSearch(int depth,
 
     if (found_new_branch && !prediction_failed) {
       fprintf(stderr, "Found new branch by forcing at distance %zu (%d).\n",
-	      dist_[bid], scoredBranches[i].second);
+        dist_[bid], scoredBranches[i].second);
       size_t min_dist = MinCflDistance(b_idx, cur_ex, new_branches);
       // Check if we were lucky.
       if (FindAlongCfg(b_idx, dist_[bid], cur_ex, new_branches)) {
-      	assert(min_dist <= dist_[bid]);
-      	// A legitimate find -- return success.
-      	if (dist_[bid] == 0) {
-      	  num_inner_zero_successes_ ++;
-      	} else {
-      	  num_inner_nonzero_successes_ ++;
-      	}
-      	success_ex_.Swap(cur_ex);
-      	return true;
+  assert(min_dist <= dist_[bid]);
+  // A legitimate find -- return success.
+  if (dist_[bid] == 0) {
+    num_inner_zero_successes_ ++;
+  } else {
+    num_inner_nonzero_successes_ ++;
+  }
+  success_ex_.Swap(cur_ex);
+  return true;
       } else {
-      	// We got lucky, but as long as there were no prediction failures,
-      	// we'll finish the CFG search to see if that works, too.
-      	assert(min_dist > dist_[bid]);
-      	assert(dist_[bid] != 0);
-      	num_inner_lucky_successes_ ++;
+  // We got lucky, but as long as there were no prediction failures,
+  // we'll finish the CFG search to see if that works, too.
+  assert(min_dist > dist_[bid]);
+  assert(dist_[bid] != 0);
+  num_inner_lucky_successes_ ++;
       }
     }
 
     if (prediction_failed) {
       fprintf(stderr, "Prediction failed.\n");
       if (!found_new_branch) {
-      	num_inner_pred_fails_ ++;
-      	continue;
+  num_inner_pred_fails_ ++;
+  continue;
       }
     }
 
@@ -1340,7 +1430,6 @@ bool CfgHeuristicSearch::DoSearch(int depth,
     }
     */
   }
-  //exit(0);
 
   return false;
 }
