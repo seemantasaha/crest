@@ -47,7 +47,13 @@ int main(int argc, char* argv[]) {
       strategy = new crest::BoundedDepthFirstSearch(prog, num_iters, atoi(argv[4]));
     }
   } else if (search_type == "-cfg") {
+    std::cout << "prog: " << prog.c_str() << std::endl;
     strategy = new crest::CfgHeuristicSearch(prog, num_iters);
+  } else if (search_type == "-bsg") { // search based on branch selectivity
+    strategy = new crest::BranchSelectivitySearch(prog, num_iters);
+  } else if (search_type == "-cfgh") {
+    std::cout << "prog: " << prog.c_str() << std::endl;
+    strategy = new crest::CfgHeuristicHybridSearch(prog, num_iters);
   } else if (search_type == "-cfg_baseline") {
     strategy = new crest::CfgBaselineSearch(prog, num_iters);
   } else if (search_type == "-hybrid") {

@@ -67,6 +67,11 @@ class Search {
 		     size_t branch_idx,
 		     vector<value_t>* input);
 
+  bool SolveAtBranchWithRandomInputs(const SymbolicExecution& ex,
+                           size_t branch_idx,
+                           vector<value_t>* input,
+                           set<var_t>*vars_to_consider); 
+
   bool CheckPrediction(const SymbolicExecution& old_ex,
 		       const SymbolicExecution& new_ex,
 		       size_t branch_idx);
@@ -77,6 +82,7 @@ class Search {
 		      set<branch_id_t>* new_branches);
 
   void RandomInput(const map<var_t,type_t>& vars, vector<value_t>* input);
+  void RandomInputForSelectedVariables(const map<var_t,type_t>& vars, vector<value_t>* input, set<var_t>* vars_to_consider);
 
  private:
   const string program_;
@@ -218,7 +224,6 @@ class CfgBaselineSearch : public Search {
   bool DoSearch(int depth, int iters, int pos, const SymbolicExecution& prev_ex);
 };
 
-
 class CfgHeuristicSearch : public Search {
  public:
   CfgHeuristicSearch(const string& program, int max_iterations);
@@ -231,9 +236,98 @@ class CfgHeuristicSearch : public Search {
   vector<nbhr_list_t> cfg_;
   vector<nbhr_list_t> cfg_rev_;
   vector<size_t> dist_;
+
+  static const size_t kInfiniteDistance = 10000;
+
+  int iters_left_;
+
+  SymbolicExecution success_ex_;
+
+  // Stats.
+  unsigned num_inner_solves_;
+  unsigned num_inner_successes_pred_fail_;
+  unsigned num_inner_lucky_successes_;
+  unsigned num_inner_zero_successes_;
+  unsigned num_inner_nonzero_successes_;
+  unsigned num_inner_recursive_successes_;
+  unsigned num_inner_unsats_;
+  unsigned num_inner_pred_fails_;
+
+  unsigned num_top_solves_;
+  unsigned num_top_solve_successes_;
+
+  unsigned num_solves_;
+  unsigned num_solve_successes_;
+  unsigned num_solve_sat_attempts_;
+  unsigned num_solve_unsats_;
+  unsigned num_solve_recurses_;
+  unsigned num_solve_pred_fails_;
+  unsigned num_solve_all_concrete_;
+  unsigned num_solve_no_paths_;
+
+  void UpdateBranchDistances();
+  void PrintStats();
+  bool DoSearch(int depth, int iters, int pos, int maxDist, const SymbolicExecution& prev_ex);
+  bool DoBoundedBFS(int i, int depth, const SymbolicExecution& prev_ex);
+  void SkipUntilReturn(const vector<branch_id_t> path, size_t* pos);
+
+  bool FindAlongCfg(size_t i, unsigned int dist,
+        const SymbolicExecution& ex,
+        const set<branch_id_t>& bs);
+
+  bool SolveAlongCfg(size_t i, unsigned int max_dist,
+         const SymbolicExecution& prev_ex);
+
+  void CollectNextBranches(const vector<branch_id_t>& path,
+         size_t* pos, vector<size_t>* idxs);
+
+  size_t MinCflDistance(size_t i,
+      const SymbolicExecution& ex,
+      const set<branch_id_t>& bs);
+};
+
+class BranchSelectivitySearch : public Search {
+ public:
+  map<branch_id_t,double> coverage_reward_map;
+  map<string,double> branch_prob_map;
+  map<string,double> branch_count_map;
+  map<string,double> branch_diff_map;
+  BranchSelectivitySearch(const string& program, int max_iterations);
+  virtual ~BranchSelectivitySearch();
+
+  virtual void Run();
+
+ private:
+  SymbolicExecution ex_;
+  SymbolicExecution success_ex_;
+
+  static const size_t kInfiniteReward = 100000;
+
+  bool SolveSelectiveBranch(int iters, const SymbolicExecution& prev_ex);
+
+  double GetBranchScore(const SymbolicExecution& prev_ex, int i);
+
+  Vlab::Theory::BigInteger GetModelCount(string constraint, int bound);
+};
+
+
+class CfgHeuristicHybridSearch : public Search {
+ public:
+  CfgHeuristicHybridSearch(const string& program, int max_iterations);
+  virtual ~CfgHeuristicHybridSearch();
+
+  virtual void Run();
+
+ private:
+  typedef vector<branch_id_t> nbhr_list_t;
+  vector<nbhr_list_t> cfg_;
+  vector<nbhr_list_t> cfg_rev_;
+  vector<size_t> dist_;
   vector<int> branch_selectivity_;
+  vector<int> path_selectivity_;
   vector<double> branch_probability_;
   vector<int> branch_selectivity_flag_;
+  vector<int> randomly_tested_compartment_;
 
   static const size_t kInfiniteDistance = 10000;
 
@@ -266,10 +360,11 @@ class CfgHeuristicSearch : public Search {
   unsigned num_solve_all_concrete_;
   unsigned num_solve_no_paths_;
 
-  void UpdateBranchSelectivity();
+  void UpdatePathSelectivity();
+  int LookAheadPathSelectivityToDecideRandomTesting(branch_id_t bid);
   void UpdateBranchDistances();
   void PrintStats();
-  bool DoSearch(int depth, int iters, int pos, int maxDist, const SymbolicExecution& prev_ex);
+  bool DoSearch(int depth, int iters, int pos, int maxDist, const SymbolicExecution& prev_ex, vector<vector<value_t>>* random_inputs);
   bool DoBoundedBFS(int i, int depth, const SymbolicExecution& prev_ex);
   void SkipUntilReturn(const vector<branch_id_t> path, size_t* pos);
 
