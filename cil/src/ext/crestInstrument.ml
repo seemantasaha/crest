@@ -553,7 +553,7 @@ let writeStmts () =
 	in
     let writeDeclare f key t=
         match t with
-          (n,tl)->  Pretty.fprintf f "(declare-const x%d " n;
+          (n,tl)->  Pretty.fprintf f "(declare-fun x%d ()" n;
 					printType f key n tl;
                     varCount := !varCount
                     (*match key with
