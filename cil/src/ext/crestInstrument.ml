@@ -519,7 +519,7 @@ let writeStmts () =
 	in
     let writeDeclare f key t=
         match t with
-          (n,tl)->  Pretty.fprintf f "(declare-const x%d " n;
+          (n,tl)->  Pretty.fprintf f "(declare-fun x%d () " n;
 					printType f tl;
                     (match key with
                     | Const (c)-> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key;
@@ -534,23 +534,23 @@ let writeStmts () =
     let getfirst (a,_) = a in
     let rec printSmt e f m=
         match e with
-          Const (c)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))(*printConst c f*)
-        | Lval (l)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))(*Pretty.fprintf f "%a " d_type (typeOf e)*)
-        | SizeOf (t)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))(*Pretty.fprintf f "%a " d_type t*)
+          Const (c)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*printConst c f*)
+        | Lval (l)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type (typeOf e)*)
+        | SizeOf (t)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type t*)
         | SizeOfE (exp)-> printSmt exp f m
-        | AlignOf (t)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))(*Pretty.fprintf f "%a " d_type t*)
+        | AlignOf (t)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type t*)
         | AlignOfE(exp)-> printSmt exp f m
         | UnOp (op,exp,t)-> 
 				(match op with
 				| LNot->
 					Pretty.fprintf f "(not ";
 					(printSmt exp f m);
-					Pretty.fprintf f") "
+					Pretty.fprintf f ") "
 
 				| _->
 					Pretty.fprintf f "(%a " d_unop op;
 					(printSmt exp f m);
-					Pretty.fprintf f") ")
+					Pretty.fprintf f ") ")
         | BinOp (op,e1,e2,t)->
 				(match op with
                 | LAnd->Pretty.fprintf f "(and ";
