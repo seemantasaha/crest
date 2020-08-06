@@ -1,6 +1,6 @@
 ### Starting build.
 # Target: src/main.ml.depends, tags: { extension:ml, file:src/main.ml, ocaml, ocamldep, quiet, traverse }
-/home/albert/.opam/default/bin/ocamldep.opt -modules src/main.ml > src/main.ml.depends
+/home/albert/.opam/default/bin/ocamldep.opt -modules src/main.ml > src/main.ml.depends # cached
 # Target: src/ext/callgraph.mli.depends, tags: { extension:mli, file:src/ext/callgraph.mli, ocaml, ocamldep, quiet, traverse }
 /home/albert/.opam/default/bin/ocamldep.opt -modules src/ext/callgraph.mli > src/ext/callgraph.mli.depends # cached
 # Target: src/cil.mli.depends, tags: { extension:mli, file:src/cil.mli, ocaml, ocamldep, quiet, traverse }
@@ -150,11 +150,69 @@ make -C .. _build/feature_config.ml # cached
 # Target: src/ext/crestInstrument.cmo, tags: { byte, compile, debug, extension:cmo, extension:ml, file:src/ext/crestInstrument.cmo, file:src/ext/crestInstrument.ml, implem, ocaml, quiet, traverse }
 /home/albert/.opam/default/bin/ocamlc.opt -c -g -I src/ext -I src -I ocamlutil -I src/frontc -I src/ext/pta -o src/ext/crestInstrument.cmo src/ext/crestInstrument.ml
 + /home/albert/.opam/default/bin/ocamlc.opt -c -g -I src/ext -I src -I ocamlutil -I src/frontc -I src/ext/pta -o src/ext/crestInstrument.cmo src/ext/crestInstrument.ml
-File "src/ext/crestInstrument.ml", line 81, characters 6-18:
+File "src/ext/crestInstrument.ml", line 84, characters 6-18:
 Warning 3: deprecated: Scanf.fscanf
 Use Scanning.from_channel then Scanf.bscanf.
+File "src/ext/crestInstrument.ml", line 515, characters 59-84:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 517, characters 68-176:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 556, characters 20-60:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 557, characters 5-25:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 582, characters 5-29:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 583, characters 5-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 587, characters 5-38:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 588, characters 5-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 592, characters 24-48:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 593, characters 6-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 594, characters 6-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 596, characters 23-46:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 597, characters 6-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 598, characters 6-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 601, characters 5-27:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 602, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 603, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 606, characters 5-31:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 607, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 608, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 623, characters 5-39:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 624, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 625, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 703, characters 31-89:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 707, characters 16-43:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 708, characters 16-30:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 709, characters 16-53:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 714, characters 4-20:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 717, characters 4-114:
+Warning 10: this expression should have type unit.
 # Target: src/main.cmo, tags: { byte, compile, debug, extension:cmo, extension:ml, file:src/main.cmo, file:src/main.ml, implem, ocaml, quiet, traverse }
-/home/albert/.opam/default/bin/ocamlc.opt -c -g -I src -I ocamlutil -I src/frontc -I src/ext -I src/ext/pta -o src/main.cmo src/main.ml
+/home/albert/.opam/default/bin/ocamlc.opt -c -g -I src -I ocamlutil -I src/frontc -I src/ext -I src/ext/pta -o src/main.cmo src/main.ml # cached
 # Target: src/ext/callgraph.ml.depends, tags: { extension:ml, file:src/ext/callgraph.ml, ocaml, ocamldep, quiet, traverse }
 /home/albert/.opam/default/bin/ocamldep.opt -modules src/ext/callgraph.ml > src/ext/callgraph.ml.depends # cached
 # Target: src/cil.ml.depends, tags: { extension:ml, file:src/cil.ml, ocaml, ocamldep, quiet, traverse }
@@ -420,9 +478,67 @@ make -C .. _build/cilversion.ml # cached
 # Target: src/ext/crestInstrument.cmx, tags: { compile, extension:cmx, extension:ml, file:src/ext/crestInstrument.cmx, file:src/ext/crestInstrument.ml, implem, native, ocaml, quiet, traverse }
 /home/albert/.opam/default/bin/ocamlopt.opt -c -I src/ext -I src -I ocamlutil -I src/frontc -I src/ext/pta -o src/ext/crestInstrument.cmx src/ext/crestInstrument.ml
 + /home/albert/.opam/default/bin/ocamlopt.opt -c -I src/ext -I src -I ocamlutil -I src/frontc -I src/ext/pta -o src/ext/crestInstrument.cmx src/ext/crestInstrument.ml
-File "src/ext/crestInstrument.ml", line 81, characters 6-18:
+File "src/ext/crestInstrument.ml", line 84, characters 6-18:
 Warning 3: deprecated: Scanf.fscanf
 Use Scanning.from_channel then Scanf.bscanf.
+File "src/ext/crestInstrument.ml", line 515, characters 59-84:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 517, characters 68-176:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 556, characters 20-60:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 557, characters 5-25:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 582, characters 5-29:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 583, characters 5-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 587, characters 5-38:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 588, characters 5-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 592, characters 24-48:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 593, characters 6-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 594, characters 6-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 596, characters 23-46:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 597, characters 6-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 598, characters 6-23:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 601, characters 5-27:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 602, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 603, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 606, characters 5-31:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 607, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 608, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 623, characters 5-39:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 624, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 625, characters 5-22:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 703, characters 31-89:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 707, characters 16-43:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 708, characters 16-30:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 709, characters 16-53:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 714, characters 4-20:
+Warning 10: this expression should have type unit.
+File "src/ext/crestInstrument.ml", line 717, characters 4-114:
+Warning 10: this expression should have type unit.
 # Target: src/main.cmx, tags: { compile, extension:cmx, extension:ml, file:src/main.cmx, file:src/main.ml, implem, native, ocaml, quiet, traverse }
 /home/albert/.opam/default/bin/ocamlopt.opt -c -I src -I ocamlutil -I src/frontc -I src/ext -I src/ext/pta -o src/main.cmx src/main.ml
 # Target: src/ext/availexps.ml.depends, tags: { extension:ml, file:src/ext/availexps.ml, ocaml, ocamldep, quiet, traverse }
