@@ -570,7 +570,8 @@ let writeStmts () =
     let getfirst (a,_) = a in
     let rec printSmt e f m=
         match e with
-          Const (c)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*printConst c f*)
+          Const (c)-> 
+                  Pretty.fprintf f "%a" d_exp e(*Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) printConst c f*)
         | Lval (l)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type (typeOf e)*)
         | SizeOf (t)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type t*)
         | SizeOfE (exp)-> printSmt exp f m
@@ -588,26 +589,26 @@ let writeStmts () =
 					(printSmt exp f m);
 					Pretty.fprintf f ") ")
         | BinOp (op,e1,e2,t)->
-				(match op with
+		(match op with
                 | LAnd->Pretty.fprintf f "(and ";
-						(printSmt e1 f m);
-						(printSmt e2 f m);
-						Pretty.fprintf f ") "
+			(printSmt e1 f m);
+			(printSmt e2 f m);
+			Pretty.fprintf f ") "
                 | LOr->Pretty.fprintf f "(or ";
-						(printSmt e1 f m);
-						(printSmt e2 f m);
-						Pretty.fprintf f ") "
-				| Eq->
-					Pretty.fprintf f "(= ";
-					(printSmt e1 f m);
-					(printSmt e2 f m);
-					Pretty.fprintf f ") "
-				| Ne->
-					Pretty.fprintf f "(not(= ";
-					(printSmt e1 f m);
-					(printSmt e2 f m);
-					Pretty.fprintf f ")) "
-				| PlusPI
+			(printSmt e1 f m);
+			(printSmt e2 f m);
+			Pretty.fprintf f ") "
+		| Eq->
+			Pretty.fprintf f "(= ";
+			(printSmt e1 f m);
+			(printSmt e2 f m);
+			Pretty.fprintf f ") "
+		| Ne->
+			Pretty.fprintf f "(not(= ";
+			(printSmt e1 f m);
+			(printSmt e2 f m);
+			Pretty.fprintf f ")) "
+		| PlusPI
                 | IndexPI
                 | MinusPI
                 | MinusPP
@@ -619,11 +620,11 @@ let writeStmts () =
                 | BAnd
                 | BXor
                 | BOr -> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))
-				| _->
-					Pretty.fprintf f "(%a " d_binop op;
-					(printSmt e1 f m);
-					(printSmt e2 f m);
-					Pretty.fprintf f ") ")
+		| _->
+			Pretty.fprintf f "(%a " d_binop op;
+			(printSmt e1 f m);
+			(printSmt e2 f m);
+			Pretty.fprintf f ") ")
         (*| Question (e1,e2,e3,t)-> (*a?b:c -> if a then b else c*)
                 (printSmt e1 f m);
                 (*Pretty.fprintf f "? ";*)
@@ -645,9 +646,9 @@ let writeStmts () =
     in
     let rec getMapping m e=
         match e with
-          Const (c)-> varCount := !varCount + 1;
-						TestMap.add e (!varCount,(typeOf e)) m
-						
+          Const (c)-> varCount := !varCount;
+                                                TestMap.add e (!varCount,(typeOf e)) m;
+                                                TestMap.remove e m
         | Lval (l)-> varCount := !varCount + 1;
 						TestMap.add e (!varCount,(typeOf e)) m
         | SizeOf (t)-> varCount := !varCount + 1;
@@ -683,13 +684,13 @@ let writeStmts () =
                 (*Pretty.fprintf f "(%a) " d_type t;*)
                 getMapping m exp
         | AddrOf (l)->varCount := !varCount + 1;
-						TestMap.add e (!varCount,(typeOf e)) m
+			TestMap.add e (!varCount,(typeOf e)) m
         | AddrOfLabel (s)->varCount := !varCount + 1;
-						TestMap.add e (!varCount,(typeOf e)) m;
+			TestMap.add e (!varCount,(typeOf e)) m;
         | StartOf (l)->varCount := !varCount + 1;
-						TestMap.add e (!varCount,(typeOf e)) m
+			TestMap.add e (!varCount,(typeOf e)) m
         | _ ->  varCount := !varCount + 1;
-						TestMap.add e (!varCount,(typeOf e)) m
+			TestMap.add e (!varCount,(typeOf e)) m
 
     in
     let rec rmrf path = match Sys.is_directory path with
@@ -715,6 +716,7 @@ let writeStmts () =
     Unix.mkdir "translation" 0o777;
     let f = open_out "translation/branch_statements" in
     Pretty.fprintf f "Expression, Statement ID, Branch1 Statement ID, Branch2 Statement ID, Function Count (ID)\n";
+    varCount := !varCount - 1;
     writeToFile f !stmts;
     close_out f
 
