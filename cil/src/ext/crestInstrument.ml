@@ -715,9 +715,10 @@ let writeStmts () =
 				let d2 = open_out ("translation/branch_" ^ (string_of_int s) ^"_original.smt2") in
                 let m = getMapping TestMap.empty e in
                 writeDeclarations m d1 d2;
-                (*Pretty.fprintf d "(assert ";*)
+                Pretty.fprintf d1 "(assert ";
+                Pretty.fprintf d2 "(assert ";
                 printSmt e d1 m 0;
-				printSmt e d2 m 1;
+		printSmt e d2 m 1;
                 Pretty.fprintf d1 ")\n\n(check-sat)\n";  
                 Pretty.fprintf d2 ")\n\n(check-sat)\n";  
                 writeToFile f tl
