@@ -551,10 +551,12 @@ let writeStmts () =
                       | _ -> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key)
                 | _-> Pretty.fprintf f "" 
 	in
-    let writeDeclare f key t=
+    let writeDeclare f1 f2 key t=
         match t with
-          (n,tl)->  Pretty.fprintf f "(declare-fun x%d ()" n;
-					printType f key n tl;
+          (n,tl)->  Pretty.fprintf f1 "(declare-fun x%d ()" n;
+					printType f1 key n tl;
+                    Pretty.fprintf f2 "(declare-fun x%d ()" n;
+					printType f2 key n tl;
                     varCount := !varCount
                     (*match key with
                     | Const (c)-> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key;
@@ -564,49 +566,49 @@ let writeStmts () =
                     | _-> varCount := !varCount*)
                     
     in
-    let writeDeclarations m f =
-        TestMap.iter (writeDeclare f) m 
+    let writeDeclarations m f1 f2 =
+        TestMap.iter (writeDeclare f1 f2) m 
     in
     let getfirst (a,_) = a in
-    let rec printSmt e f m=
+    let rec printSmt e f m n=
         match e with
           Const (c)-> 
                   Pretty.fprintf f "%a" d_exp e(*Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) printConst c f*)
         | Lval (l)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type (typeOf e)*)
         | SizeOf (t)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type t*)
-        | SizeOfE (exp)-> printSmt exp f m
+        | SizeOfE (exp)-> printSmt exp f m n
         | AlignOf (t)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type t*)
-        | AlignOfE(exp)-> printSmt exp f m
+        | AlignOfE(exp)-> printSmt exp f m n
         | UnOp (op,exp,t)-> 
-				(match op with
-				| LNot->
-					Pretty.fprintf f "(not ";
-					(printSmt exp f m);
-					Pretty.fprintf f ") "
+		(match op with
+		| LNot->
+			Pretty.fprintf f "(not ";
+			(printSmt exp f m n);
+			Pretty.fprintf f ") "
 
-				| _->
-					Pretty.fprintf f "(%a " d_unop op;
-					(printSmt exp f m);
-					Pretty.fprintf f ") ")
+		| _->
+			Pretty.fprintf f "(%a " d_unop op;
+			(printSmt exp f m n);
+			Pretty.fprintf f ") ")
         | BinOp (op,e1,e2,t)->
 		(match op with
                 | LAnd->Pretty.fprintf f "(and ";
-			(printSmt e1 f m);
-			(printSmt e2 f m);
+			(printSmt e1 f m n);
+			(printSmt e2 f m n);
 			Pretty.fprintf f ") "
                 | LOr->Pretty.fprintf f "(or ";
-			(printSmt e1 f m);
-			(printSmt e2 f m);
+			(printSmt e1 f m n);
+			(printSmt e2 f m n);
 			Pretty.fprintf f ") "
 		| Eq->
 			Pretty.fprintf f "(= ";
-			(printSmt e1 f m);
-			(printSmt e2 f m);
+			(printSmt e1 f m n);
+			(printSmt e2 f m n);
 			Pretty.fprintf f ") "
 		| Ne->
 			Pretty.fprintf f "(not(= ";
-			(printSmt e1 f m);
-			(printSmt e2 f m);
+			(printSmt e1 f m n);
+			(printSmt e2 f m n);
 			Pretty.fprintf f ")) "
 		| PlusPI
                 | IndexPI
@@ -619,11 +621,16 @@ let writeStmts () =
                 | Shiftrt
                 | BAnd
                 | BXor
-                | BOr -> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))
-		| _->
+                | BOr -> if n = 0 then Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) else
+			(Pretty.fprintf f "(%a " d_binop op;
+			(printSmt e1 f m n);
+                        Pretty.fprintf f " ";
+			(printSmt e2 f m n);
+			Pretty.fprintf f ") ")
+                | _->
 			Pretty.fprintf f "(%a " d_binop op;
-			(printSmt e1 f m);
-			(printSmt e2 f m);
+			(printSmt e1 f m n);
+			(printSmt e2 f m n);
 			Pretty.fprintf f ") ")
         (*| Question (e1,e2,e3,t)-> (*a?b:c -> if a then b else c*)
                 (printSmt e1 f m);
@@ -634,7 +641,7 @@ let writeStmts () =
                 (*Pretty.fprintf f "(type: %a) " d_type t*)*)
         | CastE (t,exp)->
                 (*Pretty.fprintf f "(%a) " d_type t;*)
-                printSmt exp f m 
+                printSmt exp f m n 
         | AddrOf (l)->Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))
                 (*Pretty.fprintf f "%a " d_type (typeOf e)*)
         | AddrOfLabel (s)->Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))
@@ -673,9 +680,11 @@ let writeStmts () =
                 | BAnd
                 | BXor
                 | BOr -> varCount := !varCount + 1;
-                         TestMap.add e (!varCount,(typeOf e)) m
-                | _->   let m = getMapping m e1 in
-                        getMapping m e2)
+                         let m = TestMap.add e (!varCount,(typeOf e)) m in
+                         let m = getMapping m e1 in
+                         getMapping m e2
+                | _ ->   let m = getMapping m e1 in
+                         getMapping m e2)
         | Question (e1,e2,e3,t)->
                 let m = getMapping m e1 in
                 let m = getMapping m e2 in
@@ -702,12 +711,15 @@ let writeStmts () =
     let rec writeToFile f ls =
         match ls with
         ((e,s,b1,b2,fc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d\n" d_exp e s b1 b2 fc;
-				let d = open_out ("translation/branch_" ^ (string_of_int s) ^".smt2") in
+				let d1 = open_out ("translation/branch_" ^ (string_of_int s) ^".smt2") in
+				let d2 = open_out ("translation/branch_" ^ (string_of_int s) ^"_original.smt2") in
                 let m = getMapping TestMap.empty e in
-                writeDeclarations m d;
-                Pretty.fprintf d "(assert ";
-                printSmt e d m;
-                Pretty.fprintf d ")\n\n(check-sat)\n";  
+                writeDeclarations m d1 d2;
+                (*Pretty.fprintf d "(assert ";*)
+                printSmt e d1 m 0;
+				printSmt e d2 m 1;
+                Pretty.fprintf d1 ")\n\n(check-sat)\n";  
+                Pretty.fprintf d2 ")\n\n(check-sat)\n";  
                 writeToFile f tl
         | _ -> ()
     in
