@@ -512,7 +512,7 @@ let writeStmts () =
 	let printType f key n t =
 
 		(match t with
-                                        | TInt (ikind,_)-> Pretty.fprintf f "Int)\n";
+                                        | TInt (ikind,_)-> Pretty.fprintf f " Int)\n";
                                                         (match ikind with
                                                          | IChar -> Pretty.fprintf f "(assert (or (and (>= x%d (- 128)) (<= x%d 127)) (and (>= x%d 0) (<= x%d 255))))\n" n n n n 
                                                          | ISChar -> (*Pretty.fprintf f "Int)\n";*)
@@ -532,10 +532,10 @@ let writeStmts () =
                                                         (match fkind with
                                                         | FFloat
                                                         | FDouble
-                                                        | FLongDouble -> Pretty.fprintf f "Int64)\n")
-					| TPtr (_,_)-> Pretty.fprintf f "Int)\n"
+                                                        | FLongDouble -> Pretty.fprintf f " Int64)\n")
+					| TPtr (_,_)-> Pretty.fprintf f " Int)\n"
 					(*| TArray-> Pretty.fprintf f "%a)\n"*)
-                                        | _ -> Pretty.fprintf f "%a)\n" d_type t);
+                                        | _ -> Pretty.fprintf f " %a)\n" d_type t);
                 match key with 
                 | Const (c)->
                       (match c with
@@ -573,43 +573,43 @@ let writeStmts () =
     let rec printSmt e f m n=
         match e with
           Const (c)-> 
-                  Pretty.fprintf f "%a" d_exp e(*Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) printConst c f*)
-        | Lval (l)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type (typeOf e)*)
-        | SizeOf (t)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type t*)
+                  Pretty.fprintf f " %a" d_exp e(*Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) printConst c f*)
+        | Lval (l)-> Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type (typeOf e)*)
+        | SizeOf (t)-> Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type t*)
         | SizeOfE (exp)-> printSmt exp f m n
-        | AlignOf (t)-> Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type t*)
+        | AlignOf (t)-> Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type t*)
         | AlignOfE(exp)-> printSmt exp f m n
         | UnOp (op,exp,t)-> 
 		(match op with
 		| LNot->
-			Pretty.fprintf f "(not ";
+			Pretty.fprintf f " (not";
 			(printSmt exp f m n);
-			Pretty.fprintf f ") "
+			Pretty.fprintf f ")"
 
 		| _->
-			Pretty.fprintf f "(%a " d_unop op;
+			Pretty.fprintf f " (%a" d_unop op;
 			(printSmt exp f m n);
-			Pretty.fprintf f ") ")
+			Pretty.fprintf f ")")
         | BinOp (op,e1,e2,t)->
 		(match op with
-                | LAnd->Pretty.fprintf f "(and ";
+                | LAnd->Pretty.fprintf f " (and";
 			(printSmt e1 f m n);
 			(printSmt e2 f m n);
-			Pretty.fprintf f ") "
-                | LOr->Pretty.fprintf f "(or ";
+			Pretty.fprintf f ")"
+                | LOr->Pretty.fprintf f " (or";
 			(printSmt e1 f m n);
 			(printSmt e2 f m n);
-			Pretty.fprintf f ") "
+			Pretty.fprintf f ")"
 		| Eq->
-			Pretty.fprintf f "(= ";
+			Pretty.fprintf f " (=";
 			(printSmt e1 f m n);
 			(printSmt e2 f m n);
-			Pretty.fprintf f ") "
+			Pretty.fprintf f ")"
 		| Ne->
-			Pretty.fprintf f "(not(= ";
+			Pretty.fprintf f " (not(=";
 			(printSmt e1 f m n);
 			(printSmt e2 f m n);
-			Pretty.fprintf f ")) "
+			Pretty.fprintf f "))"
 		| PlusPI
                 | IndexPI
                 | MinusPI
@@ -621,17 +621,17 @@ let writeStmts () =
                 | Shiftrt
                 | BAnd
                 | BXor
-                | BOr -> if n = 0 then Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) else
-			(Pretty.fprintf f "(%a " d_binop op;
+                | BOr -> if n = 0 then Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) else
+			(Pretty.fprintf f " (%a" d_binop op;
 			(printSmt e1 f m n);
                         Pretty.fprintf f " ";
 			(printSmt e2 f m n);
-			Pretty.fprintf f ") ")
+			Pretty.fprintf f ")")
                 | _->
-			Pretty.fprintf f "(%a " d_binop op;
+			Pretty.fprintf f " (%a" d_binop op;
 			(printSmt e1 f m n);
 			(printSmt e2 f m n);
-			Pretty.fprintf f ") ")
+			Pretty.fprintf f ")")
         (*| Question (e1,e2,e3,t)-> (*a?b:c -> if a then b else c*)
                 (printSmt e1 f m);
                 (*Pretty.fprintf f "? ";*)
@@ -642,13 +642,13 @@ let writeStmts () =
         | CastE (t,exp)->
                 (*Pretty.fprintf f "(%a) " d_type t;*)
                 printSmt exp f m n 
-        | AddrOf (l)->Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))
+        | AddrOf (l)->Pretty.fprintf f " x%d" (getfirst (TestMap.find e m))
                 (*Pretty.fprintf f "%a " d_type (typeOf e)*)
-        | AddrOfLabel (s)->Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))
+        | AddrOfLabel (s)->Pretty.fprintf f " x%d" (getfirst (TestMap.find e m))
                 (*Pretty.fprintf f "%a " d_type (typeOf e)*)
-        | StartOf (l)->Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))
+        | StartOf (l)->Pretty.fprintf f " x%d" (getfirst (TestMap.find e m))
                 (*Pretty.fprintf f "%a " d_type (typeOf e)*)
-        | _ ->  Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))(*Pretty.fprintf f "%a " d_exp e*)
+        | _ ->  Pretty.fprintf f " x%d" (getfirst (TestMap.find e m))(*Pretty.fprintf f "%a " d_exp e*)
 
     in
     let rec getMapping m e=
