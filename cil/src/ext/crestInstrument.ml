@@ -399,12 +399,12 @@ object (self)
   method vstmt(s) =
 
     match s.skind with
-      | If (e, b1, b2, _) ->
+      | If (e, b1, b2, loc) ->
           Printf.printf "Branch Expression Found!\n";
           let getFirstStmtId blk = (List.hd blk.bstmts).sid in
           let b1_sid = getFirstStmtId b1 in
           let b2_sid = getFirstStmtId b2 in
-            stmts:= !stmts@[(e,s.sid,b1_sid,b2_sid,!funCount)];
+            stmts:= !stmts@[(e,s.sid,b1_sid,b2_sid,!funCount,loc)];
             (self#queueInstr (instrumentExpr e) ;
               prependToBlock [mkBranch b1_sid 1] b1 ;
               prependToBlock [mkBranch b2_sid 0] b2 ;
@@ -685,7 +685,7 @@ let writeStmts () =
     in
     let rec writeToFile f ls =
       match ls with
-      ((e,s,b1,b2,fc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d\n" d_exp e s b1 b2 fc;
+      ((e,s,b1,b2,fc,loc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d, %a\n" d_exp e s b1 b2 fc d_loc loc;
       let d = open_out ("translation/branch_" ^ (string_of_int s) ^".smt2") in
         let m = getMapping TestMap.empty e in
           writeDeclarations m d;
