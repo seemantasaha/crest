@@ -10,10 +10,7 @@
  *)
 
 open Cil
-
 open Pretty
-
-(*open Errormsg*)
 
 (*
  * Utilities that should be in the O'Caml standard libraries.
@@ -75,8 +72,9 @@ let curBranches = ref []
 let getNewId () = ((idCount := !idCount + 1); !idCount)
 let addBranchPair bp = (curBranches := bp :: !curBranches)
 let addFunction () = (branches := (!funCount, !curBranches) :: !branches;
-          curBranches := [];
-          funCount := !funCount + 1)
+
+curBranches := [];
+funCount := !funCount + 1)
 
 let readCounter fname =
   try
@@ -399,9 +397,6 @@ object (self)
    * Instrument a statement (branch or function return).
    *)
   method vstmt(s) =
-    (*let d_string (fmt: ('a,unit,doc,string) format4) : 'a =
-            let f (d: doc) : string =
-                    Pretty.sprint 200 d*)
 
     match s.skind with
       | If (e, b1, b2, loc) ->
@@ -410,11 +405,11 @@ object (self)
           let b1_sid = getFirstStmtId b1 in
           let b2_sid = getFirstStmtId b2 in
           stmts:= !stmts@[(e,s.sid,b1_sid,b2_sid,!funCount,loc)];
-      (self#queueInstr (instrumentExpr e) ;
-       prependToBlock [mkBranch b1_sid 1] b1 ;
-       prependToBlock [mkBranch b2_sid 0] b2 ;
-             addBranchPair (b1_sid, b2_sid)) ;
-            DoChildren
+          (self#queueInstr (instrumentExpr e) ;
+          prependToBlock [mkBranch b1_sid 1] b1 ;
+          prependToBlock [mkBranch b2_sid 0] b2 ;
+          addBranchPair (b1_sid, b2_sid)) ;
+          DoChildren
 
       | Return (Some e, _) ->
           if isSymbolicType (typeOf e) then
@@ -487,7 +482,7 @@ let addCrestInitializer f =
     crestInitFunc.vstorage <- Extern ;
     crestInitFunc.vattr <- [Attr ("crest_skip", [])] ;
     prependToBlock [Call (None, Lval (var crestInitFunc), [], locUnknown)]
-                   globalInit.sbody
+      globalInit.sbody
 
 
 let prepareGlobalForCFG glob =
@@ -498,72 +493,56 @@ let prepareGlobalForCFG glob =
 module TestMap = Map.Make(struct type t = Cil.exp let compare = compare end)
 let varCount = ref 0 
 let writeStmts () =
-    (*let printLval l f=
-        match l with
-          (lh,ofs)-> 
-			match lh with
-			|Var (v)-> if v.vreferenced = true
-						then Pretty.fprintf f v.vdescr
-						else Pretty.fprintf f ""
-			| _ -> Pretty.fprintf f ""
-		  
-        
-    in*)
 	let printType f key n t =
 
 		(match t with
-                                        | TInt (ikind,_)-> Pretty.fprintf f " Int)\n";
-                                                        (match ikind with
-                                                         | IChar -> Pretty.fprintf f "(assert (or (and (>= x%d (- 128)) (<= x%d 127)) (and (>= x%d 0) (<= x%d 255))))\n" n n n n 
-                                                         | ISChar -> (*Pretty.fprintf f "Int)\n";*)
-                                                                    Pretty.fprintf f "(assert (and (>= x%d (- 128)) (<= x%d 127 )))\n" n n
-                                                         | IUChar -> (*Pretty.fprintf f "Int)\n";*)
-                                                                    Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 255)))\n" n n
-                                                         | IBool -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 1)))\n" n n
-                                                         | IInt -> Pretty.fprintf f "(assert (and (>= x%d (- 2147483648)) (<= x%d 2147483647)))\n" n n
-                                                         | IUInt -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 4294967295)))\n" n n
-                                                         | IShort -> Pretty.fprintf f "(assert (and (>= x%d (- 32768)) (<= x%d 32767)))\n" n n
-                                                         | IUShort -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 65535)))\n" n n
-                                                         | ILong -> Pretty.fprintf f "(assert (and (>= x%d (-2147483648)) (<= x%d 2147483647)))\n" n n
-                                                         | IULong -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 4294967295)))\n" n n
-                                                         | ILongLong -> Pretty.fprintf f "(assert (and (>= x%d (- 9223372036854775808)) (<= x%d 9223372036854775807)))\n" n n
-                                                         | IULongLong -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 18446744073709551615)))\n" n n)
+      | TInt (ikind,_)-> Pretty.fprintf f " Int)\n";
+        (match ikind with
+          | IChar -> Pretty.fprintf f "(assert (or (and (>= x%d (- 128)) (<= x%d 127)) (and (>= x%d 0) (<= x%d 255))))\n" n n n n 
+          | ISChar -> (*Pretty.fprintf f " Int)\n";*)
+            Pretty.fprintf f "(assert (and (>= x%d (- 128)) (<= x%d 127 )))\n" n n
+          | IUChar -> (*Pretty.fprintf f " Int)\n";*)
+            Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 255)))\n" n n
+          | IBool -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 1)))\n" n n
+          | IInt -> Pretty.fprintf f "(assert (and (>= x%d (- 2147483648)) (<= x%d 2147483647)))\n" n n
+          | IUInt -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 4294967295)))\n" n n
+          | IShort -> Pretty.fprintf f "(assert (and (>= x%d (- 32768)) (<= x%d 32767)))\n" n n
+          | IUShort -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 65535)))\n" n n
+          | ILong -> Pretty.fprintf f "(assert (and (>= x%d (-2147483648)) (<= x%d 2147483647)))\n" n n
+          | IULong -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 4294967295)))\n" n n
+          | ILongLong -> Pretty.fprintf f "(assert (and (>= x%d (- 9223372036854775808)) (<= x%d 9223372036854775807)))\n" n n
+          | IULongLong -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 18446744073709551615)))\n" n n)
 					| TFloat (fkind,_)-> 
-                                                        (match fkind with
-                                                        | FFloat
-                                                        | FDouble
-                                                        | FLongDouble -> Pretty.fprintf f " Int64)\n")
+          (match fkind with
+          | FFloat
+          | FDouble
+          | FLongDouble -> Pretty.fprintf f " Int64)\n")
 					| TPtr (_,_)-> Pretty.fprintf f " Int)\n"
-					(*| TArray-> Pretty.fprintf f "%a)\n"*)
-                                        | _ -> Pretty.fprintf f " %a)\n" d_type t);
-                match key with 
-                | Const (c)->
-                      (match c with
-                      | CInt64 (i,_,_) -> 
-                                      if i < Int64.zero
-                                      then Pretty.fprintf f "(assert (= x%d (- %s)))\n" n (Int64.to_string (Int64.neg i))
-                                      else Pretty.fprintf f "(assert (= x%d %s))\n" n (Int64.to_string i)
-                      (*| CStr (s) -> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key
-                      | CWStr (l) -> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key
-                      | CChr (c) -> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key
-                      | CReal (f,_,_) -> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key
-                      | CEnum (e,s,_)-> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key*)
-                      | _ -> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key)
-                | _-> Pretty.fprintf f "" 
+					(*| TArray-> Pretty.fprintf f " %a)\n"*)
+          | _ -> Pretty.fprintf f " %a)\n" d_type t);
+            match key with 
+            | Const (c)->
+              (match c with
+              | CInt64 (i,_,_) -> 
+                if i < Int64.zero
+                then Pretty.fprintf f "(assert (= x%d (- %s)))\n" n (Int64.to_string (Int64.neg i))
+                else Pretty.fprintf f "(assert (= x%d %s))\n" n (Int64.to_string i)
+              (*| CStr (s) -> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key
+              | CWStr (l) -> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key
+              | CChr (c) -> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key
+              | CReal (f,_,_) -> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key
+              | CEnum (e,s,_)-> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key*)
+              | _ -> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key)
+            | _-> Pretty.fprintf f "" 
 	in
     let writeDeclare f1 f2 key t=
         match t with
-          (n,tl)->  Pretty.fprintf f1 "(declare-fun x%d ()" n;
-					printType f1 key n tl;
-                    Pretty.fprintf f2 "(declare-fun x%d ()" n;
-					printType f2 key n tl;
-                    varCount := !varCount
-                    (*match key with
-                    | Const (c)-> Pretty.fprintf f "(assert (= x%d %a))\n" n d_exp key;
-								varCount := !varCount
-					(*| Lval (l)-> printLval l f;
-								varCount := !varCount*)
-                    | _-> varCount := !varCount*)
+          (n,tl)->  
+            Pretty.fprintf f1 "(declare-fun x%d ()" n;
+            printType f1 key n tl;
+            Pretty.fprintf f2 "(declare-fun x%d ()" n;
+            printType f2 key n tl;
+          varCount := !varCount
                     
     in
     let writeDeclarations m f1 f2 =
@@ -572,90 +551,91 @@ let writeStmts () =
     let getfirst (a,_) = a in
     let rec printSmt e f m n=
         match e with
-          Const (c)-> 
-                  Pretty.fprintf f " %a" d_exp e(*Pretty.fprintf f "x%d " (getfirst (TestMap.find e m)) printConst c f*)
-        | Lval (l)-> Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type (typeOf e)*)
-        | SizeOf (t)-> Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type t*)
+          Const (c)-> Pretty.fprintf f " %a" d_exp e (*Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) printConst c f*)
+        | Lval (l)-> Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f " %a" d_type (typeOf e)*)
+        | SizeOf (t)-> Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f " %a" d_type t*)
         | SizeOfE (exp)-> printSmt exp f m n
-        | AlignOf (t)-> Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f "%a " d_type t*)
+        | AlignOf (t)-> Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f " %a" d_type t*)
         | AlignOfE(exp)-> printSmt exp f m n
         | UnOp (op,exp,t)-> 
-		(match op with
-		| LNot->
-			Pretty.fprintf f " (not";
-			(printSmt exp f m n);
-			Pretty.fprintf f ")"
-
-		| _->
-			Pretty.fprintf f " (%a" d_unop op;
-			(printSmt exp f m n);
-			Pretty.fprintf f ")")
+          (match op with
+            | LNot->
+              Pretty.fprintf f " (not";
+              (printSmt exp f m n);
+              Pretty.fprintf f ")"
+            | _->
+              Pretty.fprintf f " (%a" d_unop op;
+              (printSmt exp f m n);
+              Pretty.fprintf f ")")
         | BinOp (op,e1,e2,t)->
-		(match op with
-                | LAnd->Pretty.fprintf f " (and";
-			(printSmt e1 f m n);
-			(printSmt e2 f m n);
-			Pretty.fprintf f ")"
-                | LOr->Pretty.fprintf f " (or";
-			(printSmt e1 f m n);
-			(printSmt e2 f m n);
-			Pretty.fprintf f ")"
-		| Eq->
-			Pretty.fprintf f " (=";
-			(printSmt e1 f m n);
-			(printSmt e2 f m n);
-			Pretty.fprintf f ")"
-		| Ne->
-			Pretty.fprintf f " (not(=";
-			(printSmt e1 f m n);
-			(printSmt e2 f m n);
-			Pretty.fprintf f "))"
-		| PlusPI
-                | IndexPI
-                | MinusPI
-                | MinusPP
-                | Mult
-                | Div
-                | Mod
-                | Shiftlt
-                | Shiftrt
-                | BAnd
-                | BXor
-                | BOr -> if n = 0 then Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) else
-			(Pretty.fprintf f " (%a" d_binop op;
-			(printSmt e1 f m n);
-                        Pretty.fprintf f " ";
-			(printSmt e2 f m n);
-			Pretty.fprintf f ")")
-                | _->
-			Pretty.fprintf f " (%a" d_binop op;
-			(printSmt e1 f m n);
-			(printSmt e2 f m n);
-			Pretty.fprintf f ")")
+          (match op with
+            | LAnd->Pretty.fprintf f " (and";
+              (printSmt e1 f m n);
+              (printSmt e2 f m n);
+              Pretty.fprintf f ")"
+            | LOr->Pretty.fprintf f " (or";
+              (printSmt e1 f m n);
+              (printSmt e2 f m n);
+              Pretty.fprintf f ")"
+            | Eq->
+              Pretty.fprintf f " (=";
+              (printSmt e1 f m n);
+              (printSmt e2 f m n);
+              Pretty.fprintf f ")"
+            | Ne->
+              Pretty.fprintf f "(not (=";
+              (printSmt e1 f m n);
+              (printSmt e2 f m n);
+              Pretty.fprintf f "))"
+            | PlusPI
+            | IndexPI
+            | MinusPI
+            | MinusPP
+            | Mult
+            | Div
+            | Mod
+            | Shiftlt
+            | Shiftrt
+            | BAnd
+            | BXor
+            | BOr -> 
+              if n = 0 then 
+                Pretty.fprintf f " x%d" (getfirst (TestMap.find e m))
+              else
+              (Pretty.fprintf f " (%a" d_binop op;
+			          (printSmt e1 f m n);
+                Pretty.fprintf f " ";
+			          (printSmt e2 f m n);
+			        Pretty.fprintf f ")")
+            | _->
+              Pretty.fprintf f " (%a" d_binop op;
+              (printSmt e1 f m n);
+              (printSmt e2 f m n);
+              Pretty.fprintf f ")")
         (*| Question (e1,e2,e3,t)-> (*a?b:c -> if a then b else c*)
-                (printSmt e1 f m);
-                (*Pretty.fprintf f "? ";*)
-                (printSmt e2 f m);
-                (*Pretty.fprintf f ": ";*)
-                (printSmt e3 f m);
-                (*Pretty.fprintf f "(type: %a) " d_type t*)*)
+          (printSmt e1 f m n);
+          (*Pretty.fprintf f " ?";*)
+          (printSmt e2 f m n);
+          (*Pretty.fprintf f " :";*)
+          (printSmt e3 f m n);
+          (*Pretty.fprintf f " (type: %a)" d_type t*)*)
         | CastE (t,exp)->
-                (*Pretty.fprintf f "(%a) " d_type t;*)
-                printSmt exp f m n 
+          (*Pretty.fprintf f " (%a)" d_type t;*)
+          printSmt exp f m n
         | AddrOf (l)->Pretty.fprintf f " x%d" (getfirst (TestMap.find e m))
-                (*Pretty.fprintf f "%a " d_type (typeOf e)*)
-        | AddrOfLabel (s)->Pretty.fprintf f " x%d" (getfirst (TestMap.find e m))
-                (*Pretty.fprintf f "%a " d_type (typeOf e)*)
-        | StartOf (l)->Pretty.fprintf f " x%d" (getfirst (TestMap.find e m))
-                (*Pretty.fprintf f "%a " d_type (typeOf e)*)
-        | _ ->  Pretty.fprintf f " x%d" (getfirst (TestMap.find e m))(*Pretty.fprintf f "%a " d_exp e*)
+          (*Pretty.fprintf f " %a" d_type (typeOf e)*)
+        | AddrOfLabel (s)->Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))
+          (*Pretty.fprintf f " %a" d_type (typeOf e)*)
+        | StartOf (l)->Pretty.fprintf f "x%d " (getfirst (TestMap.find e m))
+          (*Pretty.fprintf f " %a" d_type (typeOf e)*)
+        | _ ->  Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f " %a" d_exp e*)
 
     in
     let rec getMapping m e=
-        match e with
-          Const (c)-> varCount := !varCount;
-                                                TestMap.add e (!varCount,(typeOf e)) m;
-                                                TestMap.remove e m
+      match e with
+        Const (c)-> varCount := !varCount + 1;
+          TestMap.add e (!varCount,(typeOf e)) m;
+          TestMap.remove e m
         | Lval (l)-> varCount := !varCount + 1;
 						TestMap.add e (!varCount,(typeOf e)) m
         | SizeOf (t)-> varCount := !varCount + 1;
@@ -665,66 +645,68 @@ let writeStmts () =
 						TestMap.add e (!varCount,t) m;
         | AlignOfE(exp)-> getMapping m exp
         | UnOp (op,exp,t)-> 
-                getMapping m exp
+            getMapping m exp
         | BinOp (op,e1,e2,t)->
-                (match op with
-                | PlusPI
-                | IndexPI
-                | MinusPI
-                | MinusPP
-                | Mult
-                | Div
-                | Mod
-                | Shiftlt
-                | Shiftrt
-                | BAnd
-                | BXor
-                | BOr -> varCount := !varCount + 1;
-                         let m = TestMap.add e (!varCount,(typeOf e)) m in
-                         let m = getMapping m e1 in
-                         getMapping m e2
-                | _ ->   let m = getMapping m e1 in
-                         getMapping m e2)
+          (match op with
+          | PlusPI
+          | IndexPI
+          | MinusPI
+          | MinusPP
+          | Mult
+          | Div
+          | Mod
+          | Shiftlt
+          | Shiftrt
+          | BAnd
+          | BXor
+          | BOr -> 
+            varCount := !varCount + 1;
+            let m = TestMap.add e (!varCount,(typeOf e)) m in
+            let m = getMapping m e1 in
+            getMapping m e2
+          | _->   
+            let m = getMapping m e1 in
+            getMapping m e2)
         | Question (e1,e2,e3,t)->
-                let m = getMapping m e1 in
-                let m = getMapping m e2 in
-                getMapping m e3
+          let m = getMapping m e1 in
+          let m = getMapping m e2 in
+          getMapping m e3
         | CastE (t,exp)->
-                (*Pretty.fprintf f "(%a) " d_type t;*)
-                getMapping m exp
+          (*Pretty.fprintf f " (%a)" d_type t;*)
+          getMapping m exp
         | AddrOf (l)->varCount := !varCount + 1;
-			TestMap.add e (!varCount,(typeOf e)) m
+          TestMap.add e (!varCount,(typeOf e)) m
         | AddrOfLabel (s)->varCount := !varCount + 1;
-			TestMap.add e (!varCount,(typeOf e)) m;
+          TestMap.add e (!varCount,(typeOf e)) m;
         | StartOf (l)->varCount := !varCount + 1;
-			TestMap.add e (!varCount,(typeOf e)) m
+          TestMap.add e (!varCount,(typeOf e)) m
         | _ ->  varCount := !varCount + 1;
-			TestMap.add e (!varCount,(typeOf e)) m
+          TestMap.add e (!varCount,(typeOf e)) m
 
     in
     let rec rmrf path = match Sys.is_directory path with
     | true -> Sys.readdir path |>
-                Array.iter (fun name -> rmrf (Filename.concat path name));
-                Unix.rmdir path
+      Array.iter (fun name -> rmrf (Filename.concat path name));
+      Unix.rmdir path
     | false -> Sys.remove path
     in
     let rec writeToFile f ls =
-        match ls with
-        ((e,s,b1,b2,fc,loc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d, %a\n" d_exp e s b1 b2 fc d_loc loc;
-				let d1 = open_out ("translation/branch_" ^ (string_of_int s) ^".smt2") in
-				let d2 = open_out ("translation/branch_" ^ (string_of_int s) ^"_original.smt2") in
-                let m = getMapping TestMap.empty e in
-                writeDeclarations m d1 d2;
-                Pretty.fprintf d1 "(assert ";
-                Pretty.fprintf d2 "(assert ";
-                printSmt e d1 m 0;
-		printSmt e d2 m 1;
-                Pretty.fprintf d1 ")\n\n(check-sat)\n";  
-                Pretty.fprintf d2 ")\n\n(check-sat)\n";  
-                writeToFile f tl
-        | _ -> ()
+      match ls with
+      ((e,s,b1,b2,fc,loc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d, %a\n" d_exp e s b1 b2 fc d_loc loc;
+      let d1 = open_out ("translation/branch_" ^ (string_of_int s) ^ ".smt2") in
+      let d2 = open_out ("translation/branch_" ^ (string_of_int s) ^ "_original.smt2") in
+      let m = getMapping TestMap.empty e in
+        writeDeclarations m d1 d2;
+        Pretty.fprintf d1 "(assert";
+        Pretty.fprintf d2 "(assert";
+        printSmt e d1 m 0;
+        printSmt e d2 m 1;
+        Pretty.fprintf d1 ")\n\n(check-sat)\n";
+        Pretty.fprintf d2 ")\n\n(check-sat)\n";  
+        writeToFile f tl
+    | _ -> ()
     in
-    if Sys.file_exists "translation" then rmrf "translation";
+      if Sys.file_exists "translation" then rmrf "translation";
     Unix.umask 0o000;
     Unix.mkdir "translation" 0o777;
     let f = open_out "translation/branch_statements" in
@@ -770,8 +752,8 @@ let feature : featureDescr =
            * defined in this file. *)
           handleCallEdgesAndWriteCfg f ;
           (* Finally instrument the program. *)
-    (let instVisitor = new crestInstrumentVisitor f in
-             visitCilFileSameGlobals (instVisitor :> cilVisitor) f) ;
+          (let instVisitor = new crestInstrumentVisitor f in
+            visitCilFileSameGlobals (instVisitor :> cilVisitor) f) ;
           (* Add a function to initialize the instrumentation library. *)
           addCrestInitializer f ;
           (* Write the ID and statement counts, the branches. *)
@@ -781,5 +763,3 @@ let feature : featureDescr =
           writeBranches ();
           writeStmts ());
   }
-
-
