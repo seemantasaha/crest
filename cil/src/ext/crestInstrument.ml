@@ -494,7 +494,6 @@ module TestMap = Map.Make(struct type t = Cil.exp let compare = compare end)
 let varCount = ref 0 
 let writeStmts () =
 	let printType f key n t =
-
 		(match t with
       | TInt (ikind,_)-> Pretty.fprintf f " Int)\n";
         (match ikind with
@@ -517,9 +516,9 @@ let writeStmts () =
           | FFloat
           | FDouble
           | FLongDouble -> Pretty.fprintf f " Int64)\n")
-					| TPtr (_,_)-> Pretty.fprintf f " Int)\n"
+	  | TPtr (_,_)-> Pretty.fprintf f " Int)\n"
 					(*| TArray-> Pretty.fprintf f " %a)\n"*)
-            | _ -> Pretty.fprintf f " %a)\n" d_type t);
+          | _ -> Pretty.fprintf f " %a)\n" d_type t);
           match key with 
           | Const (c)->
             (match c with
@@ -554,7 +553,14 @@ let writeStmts () =
     let getfirst (a,_) = a in
     let rec printSmt e f m=
         match e with
-          Const (c)-> Pretty.fprintf f " %a" d_exp e (*Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) printConst c f*)
+          Const (c)-> 
+                  (match c with
+                  | CInt64 (i,_,_)->
+                           if i < Int64.zero
+                           then Pretty.fprintf f " -%s" (Int64.to_string (Int64.neg i))
+                           else Pretty.fprintf f " %s" (Int64.to_string i)
+                  | _-> Pretty.fprintf f " %a" d_exp e
+                  )(*Pretty.fprintf f " %a" d_exp e*) (*Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) printConst c f*)
         | Lval (l)-> Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f " %a" d_type (typeOf e)*)
         | SizeOf (t)-> Pretty.fprintf f " x%d" (getfirst (TestMap.find e m)) (*Pretty.fprintf f " %a" d_type t*)
         | SizeOfE (exp)-> printSmt exp f m
@@ -685,7 +691,7 @@ let writeStmts () =
     in
     let rec writeToFile f ls =
       match ls with
-      ((e,s,b1,b2,fc,loc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d, %a\n" d_exp e s b1 b2 fc d_loc loc;
+      ((e,s,b1,b2,fc,loc)::tl)-> Pretty.fprintf f "%a,%d,%d,%d,%d,%a\n" d_exp e s b1 b2 fc d_loc loc;
       let d = open_out ("translation/branch_" ^ (string_of_int s) ^".smt2") in
         let m = getMapping TestMap.empty e in
           writeDeclarations m d;
