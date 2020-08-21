@@ -691,7 +691,7 @@ let writeStmts () =
     in
     let rec writeToFile f ls =
       match ls with
-      ((e,s,b1,b2,fc,loc)::tl)-> Pretty.fprintf f "%a,%d,%d,%d,%d,%a\n" d_exp e s b1 b2 fc d_loc loc;
+      ((e,s,b1,b2,fc,loc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d, %a\n" d_exp e s b1 b2 fc d_loc loc;
       let d = open_out ("translation/branch_" ^ (string_of_int s) ^".smt2") in
         let m = getMapping TestMap.empty e in
           writeDeclarations m d;
