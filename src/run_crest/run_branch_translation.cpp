@@ -27,6 +27,8 @@ using std::pair;
 using std::queue;
 using std::random_shuffle;
 using std::stable_sort;
+using std::string;
+using std::stringstream;
 
 void parse_statements(string line, string* expression);
 Vlab::Theory::BigInteger get_model_count(string constraint, int bound);
@@ -40,17 +42,17 @@ int main(int argc, char* argv[]){
 	}
 	ifstream branch_statements, branch_smt;
 	ofstream results;
-	string line,constraint;
+	string line,constraint,directory;
 	string expression[6];
-
-	branch_statements.open(argv[1]+"/branch_statements");
+	directory = argv[1];
+	branch_statements.open(directory+"/branch_statements");
 	results.open("results.txt");
 
 	if (branch_statements.is_open()){
-		getline(branch_statements,line) //Get rid of the first line
-		while(getline(branch_statments,line)){
+		getline(branch_statements,line); //Get rid of the first line
+		while(getline(branch_statements,line)){
 			parse_statements(line,expression);
-			branch_smt.open(argv[1]+"/branch_"+expression[1]+".smt2");
+			branch_smt.open(directory+"/branch_"+expression[1]+".smt2");
 			constraint.assign( (std::istreambuf_iterator<char>(branch_smt)),
 					   (std::istreambuf_iterator<char>() ) );
 			Vlab::Theory::BigInteger model_count = get_model_count(constraint, 32);
@@ -65,7 +67,7 @@ int main(int argc, char* argv[]){
 
 void parse_statements(string line, string* expression){
 	stringstream s_stream(line);
-	pos = 0;
+	int pos = 0;
 	while(s_stream.good()){
 		string substr;
 		getline(s_stream, substr, ',');
