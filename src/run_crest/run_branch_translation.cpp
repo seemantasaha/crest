@@ -53,9 +53,11 @@ int main(int argc, char* argv[]){
 		while(getline(branch_statements,line)){
 			parse_statements(line,expression);
 			branch_smt.open(directory+"/branch_"+expression[1]+".smt2");
+			cout << directory+"/branch_"+expression[1]+".smt2" << endl;
 			constraint.assign( (std::istreambuf_iterator<char>(branch_smt)),
 					   (std::istreambuf_iterator<char>() ) );
-			Vlab::Theory::BigInteger model_count = get_model_count(constraint, 32);
+			cout << constraint<< endl;
+			Vlab::Theory::BigInteger model_count = get_model_count(constraint, 64);
 			results << "branch " << expression[1] << " , count: " << model_count << endl;
 			branch_smt.close();
 		}
@@ -66,7 +68,9 @@ int main(int argc, char* argv[]){
 }
 
 void parse_statements(string line, string* expression){
-	stringstream s_stream(line);
+	string str = line;
+	str.erase(remove(str.begin(), str.end(), ' '), str.end()); 
+	stringstream s_stream(str);
 	int pos = 0;
 	while(s_stream.good()){
 		string substr;
