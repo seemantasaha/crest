@@ -497,7 +497,7 @@ let writeStmts () =
 		(match t with
       | TInt (ikind,_)-> Pretty.fprintf f " Int)\n";
         (match ikind with
-          | IChar -> Pretty.fprintf f "(assert (or (and (>= x%d (- 128)) (<= x%d 127)) (and (>= x%d 0) (<= x%d 255))))\n" n n n n 
+          | IChar -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 255)))\n" n n 
           | ISChar -> (*Pretty.fprintf f " Int)\n";*)
             Pretty.fprintf f "(assert (and (>= x%d (- 128)) (<= x%d 127 )))\n" n n
           | IUChar -> (*Pretty.fprintf f " Int)\n";*)
