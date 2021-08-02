@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+import os
+import sys
+import subprocess
+
+intDomainSize = 2**32
+
 class Node:
 	def __init__(self, id):
 		self.id = id
@@ -15,11 +21,15 @@ class Node:
 		return self.visited
 
 class CFG:
-	def __init__(self):
+	def __init__(self, cfgPath, branchConstraintsDir):
+		self.cfgPath = cfgPath
+		self.branchConstraintsDir = branchConstraintsDir
 		self.rootNode = 0
 		self.finalNode = 0
 		self.nodeSet = set()
 		self.nodeIDDict = {}
+		self.nodeProbDict = {}
+		self.pathProbDict = {}
 		self.nodeWithIncomingEdgeSet = set()
 		self.edgeSet = set()
 		self.nodeEdgeMappingDict = {}
@@ -38,8 +48,8 @@ class CFG:
 				self.finalNode = node
 				break
 
-	def parseCFG(self, cfgPath):
-		cfgFile = open(cfgPath, 'r')
+	def parseCFG(self):
+		cfgFile = open(self.cfgPath, 'r')
 		lines = cfgFile.readlines()
 		for line in lines:
 			nodeStrList = line.split()
@@ -81,6 +91,8 @@ class CFG:
 				self.edgeSet.add((startNode,falseNode))
 				self.nodeWithIncomingEdgeSet.add(falseNode)
 				self.nodeEdgeMappingDict[startNode].append(falseNode)
+				#branching node, so we need to compute probability from branch constraints
+				self.processBranchConstraints(startNode)
 
 
 	def getRootNode(self):
@@ -122,6 +134,7 @@ class CFG:
 		path.append(u.getID())
 		if u == d:
 			print(path)
+			self.computePathProbability(path)
 		else:
 			if len(self.nodeEdgeMappingDict[u]) >= 1:
 				if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
@@ -138,10 +151,47 @@ class CFG:
 		path = []
 		self.printAllPathsUtil(s, d, path)
 
+	def computePathProbability(self, path):
+		pathStr = ""
+		pathProb = 1.0
+		for node in path:
+			pathStr += str(node) + "->"
+			if node in self.nodeProbDict:
+				pathProb *= self.nodeProbDict[node]
+		print(pathStr + " : " + str(pathProb))  
+
+	def modelCount(self, consPath):
+		print(consPath)
+		process = subprocess.Popen(["abc", "-i", consPath, "-bi", "31", "-v", "0"], stdout = subprocess.PIPE)
+		result = process.communicate()[0].decode('utf-8')
+		process.terminate()
+		print(result)
+		lines = result.split('\n');
+		print(lines)
+		count = 0
+		if lines[0] == "sat":
+			count = int(lines[1])
+		return count
+
+	def computeBranchProbability(self, nodeID, constraint):
+		trueCount = self.modelCount(constraint)
+		print("True branch mode count: " + str(trueCount))
+		trueProb = trueCount / intDomainSize
+		falseProb = 1.0 - trueProb
+
+		nodeList = self.nodeEdgeMappingDict[self.nodeIDDict[nodeID]]
+		self.nodeProbDict[nodeList[0].getID()] = trueProb
+		self.nodeProbDict[nodeList[1].getID()] = falseProb
+
+	def processBranchConstraints(self, branchNode):
+		nodeID = branchNode.getID()
+		consPath = self.branchConstraintsDir + "/" + "branch_" + str(nodeID) + ".smt2"
+		self.computeBranchProbability(nodeID, consPath)
+
 
 def main(cfgPath,branchConstraintDir):
-	cfg = CFG()
-	cfg.parseCFG(cfgPath)
+	cfg = CFG(cfgPath,branchConstraintDir)
+	cfg.parseCFG()
 	cfg.serRootandFinalNode()
 	print("CFG:")
 	cfg.printCFG()

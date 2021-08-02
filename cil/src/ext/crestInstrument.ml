@@ -404,14 +404,19 @@ object (self)
           let getFirstStmtId blk = (List.hd blk.bstmts).sid in
           let b1_sid = getFirstStmtId b1 in
           let b2_sid = getFirstStmtId b2 in
-            stmts:= !stmts@[(e,s.sid,b1_sid,b2_sid,!funCount,loc)];
+          let getStmtKind blk = (List.hd blk.bstmts).skind in
+          let b1_kind = getStmtKind b1 in
+          let b2_kind = getStmtKind b2 in
+          let b1_loc = get_stmtLoc b1_kind in
+          let b2_loc = get_stmtLoc b2_kind in
+            stmts:= !stmts@[(e,s.sid,b1_sid,b2_sid,!funCount,loc,b1_loc,b2_loc)];
             (self#queueInstr (instrumentExpr e) ;
               prependToBlock [mkBranch b1_sid 1] b1 ;
               prependToBlock [mkBranch b2_sid 0] b2 ;
               addBranchPair (b1_sid, b2_sid)) ;
             DoChildren
 
-      | Return (Some e, _) ->
+      | Return (Some e, loc) ->
           if isSymbolicType (typeOf e) then
             self#queueInstr (instrumentExpr e) ;
           self#queueInstr [mkReturn ()] ;
@@ -691,7 +696,7 @@ let writeStmts () =
     in
     let rec writeToFile f ls =
       match ls with
-      ((e,s,b1,b2,fc,loc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d, %a\n" d_exp e s b1 b2 fc d_loc loc;
+      ((e,s,b1,b2,fc,loc,b1Loc,b2Loc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d, %a %a %a\n" d_exp e s b1 b2 fc d_loc loc d_loc b1Loc d_loc b2Loc;
       let d = open_out ("translation/branch_" ^ (string_of_int s) ^".smt2") in
         let m = getMapping TestMap.empty e in
           writeDeclarations m d;
@@ -705,7 +710,7 @@ let writeStmts () =
     Unix.umask 0o000;
     Unix.mkdir "translation" 0o777;
     let f = open_out "translation/branch_statements" in
-    Pretty.fprintf f "Expression, Statement ID, Branch1 Statement ID, Branch2 Statement ID, Function Count (ID)\n";
+    Pretty.fprintf f "Expression, Statement ID, Branch1 Statement ID, Branch2 Statement ID, Function Count (ID), LineNo, TrueBranchLineNo, FalseBranchLineNo\n";
     varCount := !varCount - 1;
     writeToFile f !stmts;
     close_out f
