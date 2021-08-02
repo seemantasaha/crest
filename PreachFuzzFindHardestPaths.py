@@ -28,6 +28,7 @@ class CFG:
 		self.finalNode = 0
 		self.nodeSet = set()
 		self.nodeIDDict = {}
+		self.nodeLineDict = {}
 		self.nodeProbDict = {}
 		self.pathProbDict = {}
 		self.nodeWithIncomingEdgeSet = set()
@@ -135,6 +136,7 @@ class CFG:
 		if u == d:
 			print(path)
 			self.computePathProbability(path)
+			self.computePathLineNumProbability(path)
 		else:
 			if len(self.nodeEdgeMappingDict[u]) >= 1:
 				if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
@@ -154,11 +156,21 @@ class CFG:
 	def computePathProbability(self, path):
 		pathStr = ""
 		pathProb = 1.0
-		for node in path:
-			pathStr += str(node) + "->"
-			if node in self.nodeProbDict:
-				pathProb *= self.nodeProbDict[node]
-		print(pathStr + " : " + str(pathProb))  
+		for nodeID in path:
+			pathStr += str(nodeID) + "->"
+			if nodeID in self.nodeProbDict:
+				pathProb *= self.nodeProbDict[nodeID]
+		print(pathStr + " : " + str(pathProb))
+
+	def computePathLineNumProbability(self, path):
+		pathStr = ""
+		pathProb = 1.0
+		for nodeID in path:
+			if str(nodeID) in self.nodeLineDict:
+				pathStr += str(self.nodeLineDict[str(nodeID)]) + "->"
+				if nodeID in self.nodeProbDict:
+					pathProb *= self.nodeProbDict[nodeID]
+		print(pathStr + " : " + str(pathProb))   
 
 	def modelCount(self, consPath):
 		print(consPath)
@@ -188,11 +200,24 @@ class CFG:
 		consPath = self.branchConstraintsDir + "/" + "branch_" + str(nodeID) + ".smt2"
 		self.computeBranchProbability(nodeID, consPath)
 
+	def setLineNumbers(self):
+		branchesPath = self.branchConstraintsDir + "/" + "branch_statements"
+		branchesFile = open(branchesPath, 'r')
+		lines = branchesFile.readlines()
+		for line in lines[1:]:
+			lineInfo = line.split(", ")
+			trueNodeID = lineInfo[2]
+			falseNodeID = lineInfo[3]
+			self.nodeLineDict[trueNodeID] = lineInfo[6].split(":")[1]
+			self.nodeLineDict[falseNodeID] = lineInfo[7].split(":")[1].split("\n")[0]
+
 
 def main(cfgPath,branchConstraintDir):
 	cfg = CFG(cfgPath,branchConstraintDir)
 	cfg.parseCFG()
 	cfg.serRootandFinalNode()
+	cfg.setLineNumbers()
+
 	print("CFG:")
 	cfg.printCFG()
 	print("Root node: " + str(cfg.getRootNode().getID()))
