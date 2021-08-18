@@ -4,8 +4,6 @@ import os
 import sys
 import subprocess
 
-intDomainSize = 2**32
-
 class Node:
 	def __init__(self, id):
 		self.id = id
@@ -26,6 +24,7 @@ class CFG:
 		self.branchConstraintsDir = branchConstraintsDir
 		self.rootNode = 0
 		self.finalNode = 0
+		self.finalNodeFlag = False
 		self.nodeSet = set()
 		self.nodeIDDict = {}
 		self.nodeLineDict = {}
@@ -37,17 +36,24 @@ class CFG:
 
 	def serRootandFinalNode(self):
 		tempNodeIDList = []
+		rootNodeList = []
+		finalNodeList = []
 		for node in self.nodeWithIncomingEdgeSet:
 			tempNodeIDList.append(node.getID())
 		for node in self.nodeSet:
 			if node.getID() not in tempNodeIDList:
-				self.rootNode = node
-				break
+				rootNodeList.append(node.getID())
 
-		for node in self.nodeSet:
-			if node not in self.nodeEdgeMappingDict:
-				self.finalNode = node
-				break
+		rootNodeID = min(rootNodeList)
+		self.rootNode = self.nodeIDDict[rootNodeID]
+
+		if self.finalNodeFlag == False:
+			print("There is no assertion node!!!")
+			for node in self.nodeSet:
+				if node not in self.nodeEdgeMappingDict:
+					finalNodeList.append(node.getID())		
+			finalNodeID = max(finalNodeList)
+			self.finalNode = self.nodeIDDict[finalNodeID]
 
 	def parseCFG(self):
 		cfgFile = open(self.cfgPath, 'r')
@@ -78,6 +84,18 @@ class CFG:
 				nodeList = []
 				nodeList.append(trueNode)
 				self.nodeWithIncomingEdgeSet.add(trueNode)
+				self.nodeEdgeMappingDict[startNode] = nodeList
+			#special case for assertion node
+			elif len(nodeStrList) > 1 and "__assert" in nodeStrList[1]:
+				self.finalNodeFlag = True
+				nodeID = 100000
+				self.finalNode = Node(nodeID)
+				self.nodeIDDict[nodeID] = self.finalNode
+				self.nodeSet.add(self.finalNode)
+				self.edgeSet.add((startNode,self.finalNode))
+				nodeList = []
+				nodeList.append(self.finalNode)
+				self.nodeWithIncomingEdgeSet.add(self.finalNode)
 				self.nodeEdgeMappingDict[startNode] = nodeList
 
 			if len(nodeStrList) > 2 and nodeStrList[2].isdigit():
@@ -137,7 +155,7 @@ class CFG:
 			print(path)
 			self.computePathProbability(path)
 			self.computePathLineNumProbability(path)
-		else:
+		elif u in self.nodeEdgeMappingDict:
 			if len(self.nodeEdgeMappingDict[u]) >= 1:
 				if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
 					self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], d, path)
@@ -154,7 +172,7 @@ class CFG:
 		self.printAllPathsUtil(s, d, path)
 
 	def computePathProbability(self, path):
-		pathStr = ""
+		pathStr = "Path using nodes: "
 		pathProb = 1.0
 		for nodeID in path:
 			pathStr += str(nodeID) + "->"
@@ -163,7 +181,7 @@ class CFG:
 		print(pathStr + " : " + str(pathProb))
 
 	def computePathLineNumProbability(self, path):
-		pathStr = ""
+		pathStr = "Path using lines: "
 		pathProb = 1.0
 		for nodeID in path:
 			if str(nodeID) in self.nodeLineDict:
@@ -174,7 +192,7 @@ class CFG:
 
 	def modelCount(self, consPath):
 		print(consPath)
-		process = subprocess.Popen(["abc", "-i", consPath, "-bi", "31", "-v", "0"], stdout = subprocess.PIPE)
+		process = subprocess.Popen(["abc", "-i", consPath, "-bi", "15", "-v", "0"], stdout = subprocess.PIPE)
 		result = process.communicate()[0].decode('utf-8')
 		process.terminate()
 		print(result)
@@ -185,15 +203,38 @@ class CFG:
 			count = int(lines[1])
 		return count
 
-	def computeBranchProbability(self, nodeID, constraint):
-		trueCount = self.modelCount(constraint)
-		print("True branch mode count: " + str(trueCount))
+	def computeBranchProbability(self, nodeID, consPath):
+		if not os.path.exists(consPath):
+			print("No constraint for this branch!!!")
+			return
+		trueCount = self.modelCount(consPath)
+		print("True branch model count: " + str(trueCount))
+		intDomainSize = self.computeDomain(consPath)
 		trueProb = trueCount / intDomainSize
 		falseProb = 1.0 - trueProb
 
 		nodeList = self.nodeEdgeMappingDict[self.nodeIDDict[nodeID]]
 		self.nodeProbDict[nodeList[0].getID()] = trueProb
 		self.nodeProbDict[nodeList[1].getID()] = falseProb
+
+	def computeDomain(self, consPath):
+		intDomainSize = 1
+		consFile = open(consPath, 'r')
+		lines = consFile.readlines()
+		for line in lines:
+			if "(assert (and (>= " in line and " 0) (<= " in line and " 255)))" in line:
+				intDomainSize *= 256
+			elif "(assert (and (>= " in line and " (- 128))) (<= " in line and " 127)))" in line:
+				intDomainSize *= 256
+			elif "(assert (and (>= " in line and " 0)) (<= " in line and " 1)))" in line:
+				intDomainSize *= 2
+			elif "(assert (and (>= " in line and " 0)) (<= " in line and " 32767)))" in line:
+				intDomainSize *= 32768
+			elif "(assert (and (>= " in line and " (- 32768)) (<= " in line and " 32767)))" in line:
+				intDomainSize *= 2*32768
+		print("Domain size for this constraint is: " + str(intDomainSize))
+		return intDomainSize
+
 
 	def processBranchConstraints(self, branchNode):
 		nodeID = branchNode.getID()

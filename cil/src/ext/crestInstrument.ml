@@ -502,20 +502,20 @@ let writeStmts () =
 		(match t with
       | TInt (ikind,_)-> Pretty.fprintf f " Int)\n";
         (match ikind with
-          | IChar -> Pretty.fprintf f "(assert (or (and (>= x%d (- 128)) (<= x%d 127)) (and (>= x%d 0) (<= x%d 255))))\n" n n n n 
+          | IChar -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 255)))\n" n n 
           | ISChar -> (*Pretty.fprintf f " Int)\n";*)
-            Pretty.fprintf f "(assert (and (>= x%d (- 128)) (<= x%d 127 )))\n" n n
+            Pretty.fprintf f "(assert (and (>= x%d (- 128)) (<= x%d 127)))\n" n n
           | IUChar -> (*Pretty.fprintf f " Int)\n";*)
             Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 255)))\n" n n
           | IBool -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 1)))\n" n n
-          | IInt -> Pretty.fprintf f "(assert (and (>= x%d (- 2147483648)) (<= x%d 2147483647)))\n" n n
-          | IUInt -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 4294967295)))\n" n n
+          | IInt -> Pretty.fprintf f "(assert (and (>= x%d (- 32768)) (<= x%d 32767)))\n" n n
+          | IUInt -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 32767)))\n" n n
           | IShort -> Pretty.fprintf f "(assert (and (>= x%d (- 32768)) (<= x%d 32767)))\n" n n
-          | IUShort -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 65535)))\n" n n
-          | ILong -> Pretty.fprintf f "(assert (and (>= x%d (-2147483648)) (<= x%d 2147483647)))\n" n n
-          | IULong -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 4294967295)))\n" n n
-          | ILongLong -> Pretty.fprintf f "(assert (and (>= x%d (- 9223372036854775808)) (<= x%d 9223372036854775807)))\n" n n
-          | IULongLong -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 18446744073709551615)))\n" n n)
+          | IUShort -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 32767)))\n" n n
+          | ILong -> Pretty.fprintf f "(assert (and (>= x%d (-32768)) (<= x%d 32767)))\n" n n
+          | IULong -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 32767)))\n" n n
+          | ILongLong -> Pretty.fprintf f "(assert (and (>= x%d (- 32768)) (<= x%d 32767)))\n" n n
+          | IULongLong -> Pretty.fprintf f "(assert (and (>= x%d 0) (<= x%d 32767)))\n" n n)
 					| TFloat (fkind,_)-> 
           (match fkind with
           | FFloat
@@ -696,7 +696,7 @@ let writeStmts () =
     in
     let rec writeToFile f ls =
       match ls with
-      ((e,s,b1,b2,fc,loc,b1Loc,b2Loc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d, %a %a %a\n" d_exp e s b1 b2 fc d_loc loc d_loc b1Loc d_loc b2Loc;
+      ((e,s,b1,b2,fc,loc,b1Loc,b2Loc)::tl)-> Pretty.fprintf f "%a, %d, %d, %d, %d, %a, %a, %a\n" d_exp e s b1 b2 fc d_loc loc d_loc b1Loc d_loc b2Loc;
       let d = open_out ("translation/branch_" ^ (string_of_int s) ^".smt2") in
         let m = getMapping TestMap.empty e in
           writeDeclarations m d;
