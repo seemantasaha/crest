@@ -23,8 +23,6 @@ class CFG:
 		self.cfgPath = cfgPath
 		self.branchConstraintsDir = branchConstraintsDir
 		self.rootNode = 0
-		self.finalNode = 0
-		self.finalNodeFlag = False
 		self.nodeSet = set()
 		self.nodeIDDict = {}
 		self.nodeLineDict = {}
@@ -34,26 +32,8 @@ class CFG:
 		self.edgeSet = set()
 		self.nodeEdgeMappingDict = {}
 
-	def setRootandFinalNode(self):
-		tempNodeIDList = []
-		rootNodeList = []
-		finalNodeList = []
-		for node in self.nodeWithIncomingEdgeSet:
-			tempNodeIDList.append(node.getID())
-		for node in self.nodeSet:
-			if node.getID() not in tempNodeIDList:
-				rootNodeList.append(node.getID())
-
-		rootNodeID = min(rootNodeList)
-		self.rootNode = self.nodeIDDict[rootNodeID]
-
-		if self.finalNodeFlag == False:
-			print("There is no assertion node!!!")
-			for node in self.nodeSet:
-				if node not in self.nodeEdgeMappingDict:
-					finalNodeList.append(node.getID())		
-			finalNodeID = max(finalNodeList)
-			self.finalNode = self.nodeIDDict[finalNodeID]
+	def setRootNode(self, rootNode):
+		self.rootNode = self.nodeIDDict[int(rootNode)]
 
 	def parseCFG(self):
 		cfgFile = open(self.cfgPath, 'r')
@@ -85,18 +65,6 @@ class CFG:
 				nodeList.append(trueNode)
 				self.nodeWithIncomingEdgeSet.add(trueNode)
 				self.nodeEdgeMappingDict[startNode] = nodeList
-			#special case for assertion node
-			elif len(nodeStrList) > 1 and "__assert" in nodeStrList[1]:
-				self.finalNodeFlag = True
-				nodeID = 100000
-				self.finalNode = Node(nodeID)
-				self.nodeIDDict[nodeID] = self.finalNode
-				self.nodeSet.add(self.finalNode)
-				self.edgeSet.add((startNode,self.finalNode))
-				nodeList = []
-				nodeList.append(self.finalNode)
-				self.nodeWithIncomingEdgeSet.add(self.finalNode)
-				self.nodeEdgeMappingDict[startNode] = nodeList
 
 			if len(nodeStrList) > 2 and nodeStrList[2].isdigit():
 				nodeID = int(nodeStrList[2])
@@ -116,9 +84,6 @@ class CFG:
 
 	def getRootNode(self):
 		return self.rootNode
-
-	def getFinalNode(self):
-		return self.finalNode
 
 	def printCFG(self):
 		for item in self.nodeEdgeMappingDict:
@@ -148,28 +113,28 @@ class CFG:
 				if self.nodeEdgeMappingDict[node][1].isVisited() == False:
 					self.runDFS(self.nodeEdgeMappingDict[node][1])
 
-	def printAllPathsUtil(self, u, d, path):
+	def printAllPathsUtil(self, u, path):
 		u.setVisited(True)
 		path.append(u.getID())
-		if u == d:
+		if u not in self.nodeEdgeMappingDict:
 			print(path)
 			self.computePathProbability(path)
 			self.computePathLineNumProbability(path)
 		elif u in self.nodeEdgeMappingDict:
 			if len(self.nodeEdgeMappingDict[u]) >= 1:
 				if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
-					self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], d, path)
+					self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path)
 			if len(self.nodeEdgeMappingDict[u]) == 2:
 				if self.nodeEdgeMappingDict[u][1].isVisited() == False:
-					self.printAllPathsUtil(self.nodeEdgeMappingDict[u][1], d, path)
+					self.printAllPathsUtil(self.nodeEdgeMappingDict[u][1], path)
 		path.pop()
 		u.setVisited(False)
 
-	def printAllPaths(self, s, d):
+	def printAllPaths(self, s):
 		for node in self.nodeSet:
 			node.setVisited(False)
 		path = []
-		self.printAllPathsUtil(s, d, path)
+		self.printAllPathsUtil(s, path)
 
 	def computePathProbability(self, path):
 		pathStr = "Path using nodes: "
@@ -257,15 +222,20 @@ def main(cfgPath,branchConstraintDir):
 	cfg = CFG(cfgPath,branchConstraintDir)
 	cfg.parseCFG()
 	cfg.setLineNumbers()
-	cfg.setRootandFinalNode()
-
-
 	print("CFG:")
 	cfg.printCFG()
-	print("Root node: " + str(cfg.getRootNode().getID()))
-	print("Final node: " + str(cfg.getFinalNode().getID()))
-	cfg.traverseCFG()
-	cfg.printAllPaths(cfg.getRootNode(), cfg.getFinalNode())
+
+	cfgFunMapPath = cfgPath + "_func_map"
+	funcFile = open(cfgFunMapPath, 'r')
+	lines = funcFile.readlines()
+	for line in lines:
+		lineInfo = line.split("\n")[0].split(" ")
+		funcName = lineInfo[0]
+		funcRootNode = lineInfo[1]
+		print("Root node: " + funcRootNode)
+		cfg.setRootNode(funcRootNode)
+		cfg.traverseCFG()
+		cfg.printAllPaths(cfg.getRootNode())
 
 if __name__ == "__main__":
     
