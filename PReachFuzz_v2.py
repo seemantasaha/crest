@@ -157,21 +157,7 @@ class CFG:
 				pathLineStr += str(self.nodeLineDict[str(nodeID)]) + "->"
 				if nodeID in self.nodeProbDict:
 					pathProb *= self.nodeProbDict[nodeID]
-		#print(pathStr + " : " + str(pathProb))
-		pathPrefix = pathNodeStr.split("->")[0]
-		#print("Path prefix: " + str(pathPrefix))
-		if pathPrefix in pathPrefixDict and pathPrefixDict[pathPrefix] > pathProb:
-			#print("Path prefix prob: " + str(pathPrefixDict[pathPrefix]))
-			#print("Prob: " + str(pathProb))
-			if pathPrefixPathDict[pathPrefix] in hardestPaths:
-				hardestPaths.pop(pathPrefixPathDict[pathPrefix])
-			hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
-			pathPrefixDict[pathPrefix] = pathProb
-			pathPrefixPathDict[pathPrefix] = (pathNodeStr,pathLineStr)
-		elif pathPrefix not in pathPrefixDict:
-			hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
-			pathPrefixDict[pathPrefix] = pathProb
-			pathPrefixPathDict[pathPrefix] = (pathNodeStr,pathLineStr)
+		hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
 
 	def computePathNodesProbability(self, path):
 		pathStr = "Path using nodes: "
