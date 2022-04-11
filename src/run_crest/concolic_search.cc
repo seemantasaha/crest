@@ -1366,4 +1366,79 @@ bool CfgHeuristicSearch::DoBoundedBFS(int i, int depth, const SymbolicExecution&
   return false;
 }
 
+
+////////////////////////////////////////////////////////////////////////
+//// PathDirectedSearch /////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+PathDirectedSearch::PathDirectedSearch(const string& program, int max_iterations)
+  : Search(program, max_iterations) { }
+
+PathDirectedSearch::~PathDirectedSearch() { }
+
+
+void PathDirectedSearch::Run() {
+
+  if (DoSearch()) {
+      vector<value_t> input = success_ex_.inputs();
+      fprintf(stderr, "inputs:\n");
+      for(int i=0; i < input.size(); i++) {
+        fprintf(stderr, "%d\n", input.at(i));
+      }
+  }
+}
+
+
+bool PathDirectedSearch::DoSearch() {
+
+  
+  SymbolicExecution ex;
+  RunProgram(vector<value_t>(), &ex);
+
+  // Solve.
+  SymbolicExecution cur_ex;
+  vector<value_t> input;
+
+  vector<int> rare_path;
+  rare_path.push_back(3);
+  rare_path.push_back(4);
+  rare_path.push_back(5);
+  rare_path.push_back(7);
+
+  size_t idx = 0;
+  fprintf(stderr, "path size=%d\n", ex.path().constraints().size());
+  while (idx < ex.path().constraints().size()) {
+    size_t branch_idx = ex.path().constraints_idx()[idx];
+    fprintf(stderr, "branch_idx=%d\n", branch_idx);
+    branch_id_t bid = ex.path().branches()[branch_idx];
+    fprintf(stderr, "branch_id=%d\n", bid);
+    if (bid != rare_path[idx]) {
+      bid = paired_branch_[ex.path().branches()[branch_idx]];
+      fprintf(stderr, "negated branch_id=%d\n", bid);
+
+      if (bid != rare_path[idx]) {
+        fprintf(stderr, "Something is wrong!!! None of the branches are in the path!!!");
+        return false;
+      } else {
+        if (!SolveAtBranch(ex, idx, &input)) {
+          fprintf(stderr, "The rare path is not feasible");
+          return false;
+        } else {
+          //successfully entered to another depth
+          RunProgram(input, &cur_ex);
+          ex.Swap(cur_ex);
+        }
+      }
+    }
+    idx++;
+  }
+  fprintf(stderr, "current path size=%d\n", cur_ex.path().constraints().size());
+  success_ex_.Swap(ex);
+
+  return true;
+}
+
+
+
+
 }  // namespace crest

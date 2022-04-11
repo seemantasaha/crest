@@ -52,6 +52,8 @@ int main(int argc, char* argv[]) {
     strategy = new crest::CfgBaselineSearch(prog, num_iters);
   } else if (search_type == "-hybrid") {
     strategy = new crest::HybridSearch(prog, num_iters, 100);
+  } else if (search_type == "-pde") {
+    strategy = new crest::PathDirectedSearch(prog, num_iters);
   } else if (search_type == "-uniform_random") {
     if (argc == 4) {
       strategy = new crest::UniformRandomSearch(prog, num_iters, 100000000);

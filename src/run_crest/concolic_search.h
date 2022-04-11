@@ -278,6 +278,19 @@ class CfgHeuristicSearch : public Search {
 			const set<branch_id_t>& bs);
 };
 
+class PathDirectedSearch : public Search {
+ public:
+  PathDirectedSearch(const string& program, int max_iterations);
+  virtual ~PathDirectedSearch();
+
+  virtual void Run();
+
+ private:
+  SymbolicExecution success_ex_;
+
+  bool DoSearch();
+};
+
 }  // namespace crest
 
 #endif  // RUN_CREST_CONCOLIC_SEARCH_H__
