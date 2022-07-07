@@ -8,6 +8,8 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See LICENSE
 // for details.
 
+#include <iostream>
+#include <vector>
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
@@ -16,6 +18,7 @@
 #include <limits>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <queue>
 #include <utility>
 
@@ -132,6 +135,7 @@ Search::Search(const string& program, int max_iterations)
   fprintf(stderr, "Iteration 0 (0s): covered %u branches [%u reach funs, %u reach branches].\n",
           num_covered_, reachable_functions_, reachable_branches_);
 
+  fprintf(stderr, "Number of branches: %u\n", branches_.size());
   // Sort the branches.
   sort(branches_.begin(), branches_.end());
 }
@@ -193,10 +197,10 @@ void Search::LaunchProgram(const vector<value_t>& inputs) {
 
 
 void Search::RunProgram(const vector<value_t>& inputs, SymbolicExecution* ex) {
-  if (++num_iters_ > max_iters_) {
-    // TODO(jburnim): Devise a better system for capping the iterations.
-    exit(0);
-  }
+  // if (++num_iters_ > max_iters_) {
+  //   // TODO(jburnim): Devise a better system for capping the iterations.
+  //   exit(0);
+  // }
 
   // Run the program.
   LaunchProgram(inputs);
@@ -207,12 +211,16 @@ void Search::RunProgram(const vector<value_t>& inputs, SymbolicExecution* ex) {
   assert(in && ex->Parse(in));
   in.close();
 
-  /*
-  for (size_t i = 0; i < ex->path().branches().size(); i++) {
-    fprintf(stderr, "%d ", ex->path().branches()[i]);
+  
+  /*size_t path_size =  ex->path().constraints().size();
+  size_t idx = 0;
+  while (idx < path_size) {
+    size_t branch_idx = ex->path().constraints_idx()[idx];
+    branch_id_t bid = ex->path().branches()[branch_idx];
+    fprintf(stderr, "%d ", bid);
+    idx++;
   }
-  fprintf(stderr, "\n");
-  */
+  fprintf(stderr, "\n");*/
 }
 
 
@@ -291,26 +299,35 @@ void Search::RandomInput(const map<var_t,type_t>& vars, vector<value_t>* input) 
 
 
 bool Search::SolveAtBranch(const SymbolicExecution& ex,
-                           size_t branch_idx,
+                           size_t idx,
                            vector<value_t>* input) {
 
   const vector<SymbolicPred*>& constraints = ex.path().constraints();
 
-  // Optimization: If any of the previous constraints are idential to the
+  // Optimization: If any of the previous constraints are identical to the
   // branch_idx-th constraint, immediately return false.
-  for (int i = static_cast<int>(branch_idx) - 1; i >= 0; i--) {
-    if (constraints[branch_idx]->Equal(*constraints[i]))
+  for (int i = static_cast<int>(idx) - 1; i >= 0; i--) {
+    if (constraints[idx]->Equal(*constraints[i])) {
+
+      size_t branch_idx = ex.path().constraints_idx()[idx];
+      branch_id_t bid = ex.path().branches()[branch_idx];
+      //fprintf(stderr, "[SolveAtBranch] branch_id=%d\n", bid);
+
+      branch_idx = ex.path().constraints_idx()[i];
+      bid = ex.path().branches()[branch_idx];
+      //fprintf(stderr, "[SolveAtBranch] conflicting branch_id=%d\n", bid);
       return false;
+    }
   }
 
   vector<const SymbolicPred*> cs(constraints.begin(),
-				 constraints.begin()+branch_idx+1);
+				 constraints.begin()+idx+1); // change here to get the prefix of the symbolic path
   map<var_t,value_t> soln;
-  constraints[branch_idx]->Negate();
+  constraints[idx]->Negate(); // instead of negating the path, add the constraint for specific branch
   // fprintf(stderr, "Yices . . . ");
   bool success = YicesSolver::IncrementalSolve(ex.inputs(), ex.vars(), cs, &soln);
-  // fprintf(stderr, "%d\n", success);
-  constraints[branch_idx]->Negate();
+  //fprintf(stderr, "%d\n", success);
+  constraints[idx]->Negate(); // change accordingly
 
   if (success) {
     // Merge the solution with the previous input to get the next
@@ -1383,7 +1400,7 @@ void PathDirectedSearch::Run() {
       vector<value_t> input = success_ex_.inputs();
       fprintf(stderr, "inputs:\n");
       for(int i=0; i < input.size(); i++) {
-        fprintf(stderr, "%d\n", input.at(i));
+        fprintf(stderr, "%d ", input.at(i));
       }
   }
 }
@@ -1393,52 +1410,458 @@ bool PathDirectedSearch::DoSearch() {
 
   
   SymbolicExecution ex;
-  RunProgram(vector<value_t>(), &ex);
+  vector<value_t> init_input;
+  init_input.push_back(60);
+  init_input.push_back(63);
+  init_input.push_back(120);
+  init_input.push_back(109);
+  init_input.push_back(108);
+  init_input.push_back(32);
+  init_input.push_back(118);
+  init_input.push_back(101);
+  init_input.push_back(114);
+  init_input.push_back(115);
+  init_input.push_back(105);
+  init_input.push_back(111);
+  init_input.push_back(110);
+  init_input.push_back(61);
+  init_input.push_back(34);
+  init_input.push_back(49);
+  init_input.push_back(46);
+  init_input.push_back(48);
+  init_input.push_back(34);
+  init_input.push_back(63);
+  init_input.push_back(62);
+  init_input.push_back(10);
+
+  init_input.push_back(97); 
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+
+  
+  
+  RunProgram(init_input, &ex);
 
   // Solve.
-  SymbolicExecution cur_ex;
   vector<value_t> input;
 
   vector<int> rare_path;
-  rare_path.push_back(3);
-  rare_path.push_back(4);
-  rare_path.push_back(5);
-  rare_path.push_back(7);
+  char path[10000] = "3739557 3739560 3739563 3739566 3739569 3739572 3739271 3739277 3728363 3728373 3728380 3728364 3728365 3728367 3728370 3738821 3738824 3738827 3738830 3738833 3738836 3738839 3738847 3728364 3728365 3728367 3728370 3738857 3725227 3725233 3725298 3728364 3728365 3728367 3728370 3738862 3725227 3725233 3725298 3738780 3738781 3725227 3725233 3725298 3738793 3725227 3725233 3725298 3738799 3738800 3725227 3725233 3725298 3738802 3738867 3725227 3725233 3725298 3804638 3804638 3804638 3739316 3739319 3739323 3739328 3739331 3739334 3739342 3728364 3728365 3728366 3728372 3728380 3728364 3728365 3728367 3728370 3804537 3804537 3804537 3728364 3728365 3728367 3728370 3728348 3739470 3739486 3728348 3739636 3739639 3739642 3739645 3739648 3739651 3739654 3739657 3739660 3739664 3739668 3739672 3739675 3739676 3739683 3739695 3739699 3739705 3738625 3738497 3738501 3738509 3738510 3738520 3738523 3738526 3738529 3738532 3738535 3738538 3738541 3738544 3738547 3738583 3738587 3738590 3738598 3738603 3738606 3726833 3726838";
+  //fprintf(stderr, "%s", path);
+  char *token = strtok(path, " ");
+  //fprintf(stderr, "%s", token);
+  // loop through the string to extract all other tokens
+  while( token != NULL ) {
+    //fprintf(stderr, "%s", token);
+    rare_path.push_back(atoi(token));
+    token = strtok(NULL, " ");
+  }
+  
+
+  
 
   size_t idx = 0;
+  // { // Print the constraints. 
+  //   string tmp;
+  //   for (size_t i = 0; i < ex.path().constraints().size(); i++) {
+  //     tmp.clear();
+  //     ex.path().constraints()[i]->AppendToString(&tmp);
+  //     fprintf(stderr, "%s\n", tmp);
+  //   }
+  // }
   fprintf(stderr, "path size=%d\n", ex.path().constraints().size());
   while (idx < ex.path().constraints().size()) {
     size_t branch_idx = ex.path().constraints_idx()[idx];
-    fprintf(stderr, "branch_idx=%d\n", branch_idx);
     branch_id_t bid = ex.path().branches()[branch_idx];
-    fprintf(stderr, "branch_id=%d\n", bid);
+    fprintf(stderr, "%d ", bid);
+    idx++;
+  }
+  fprintf(stderr, "\n");
+  idx = 0;
+  while (idx < ex.path().constraints().size() && idx < rare_path.size()) {
+    //fprintf(stderr, "idx=%d\n", idx);
+    size_t branch_idx = ex.path().constraints_idx()[idx];
+    //fprintf(stderr, "branch_idx=%d\n", branch_idx);
+    branch_id_t bid = ex.path().branches()[branch_idx];
+    //fprintf(stderr, "branch_id=%d\n", bid);
+    input.clear();
     if (bid != rare_path[idx]) {
+      fprintf(stderr, "branch_id=%d\n", bid);
       bid = paired_branch_[ex.path().branches()[branch_idx]];
       fprintf(stderr, "negated branch_id=%d\n", bid);
-
+      fprintf(stderr, "rare branch_id=%d\n", rare_path[idx]);
       if (bid != rare_path[idx]) {
         fprintf(stderr, "Something is wrong!!! None of the branches are in the path!!!");
         return false;
+        //idx++;
+        //continue;
       } else {
+        fprintf(stderr, "%d\n", branch_idx);
+        fprintf(stderr, "%d\n", ex.path().branches()[branch_idx]);
         if (!SolveAtBranch(ex, idx, &input)) {
           fprintf(stderr, "The rare path is not feasible");
           return false;
         } else {
           //successfully entered to another depth
+          fprintf(stderr, "inputs:\n");
+          for(int i=0; i < input.size(); i++) {
+            fprintf(stderr, "%d ", input.at(i));
+          }
+          fprintf(stderr, "\nRunning program ...");
+          SymbolicExecution cur_ex;
           RunProgram(input, &cur_ex);
+          fprintf(stderr, "\nCurrent symbolic path size = %d", cur_ex.path().constraints().size());
+          fprintf(stderr, "\nUpdating symbolic path ...");
           ex.Swap(cur_ex);
+
+          fprintf(stderr, "\nidx = %d", idx);
+          fprintf(stderr, "\nsymbolic path size = %d", ex.path().constraints().size());
+          fprintf(stderr, "\nrare path size = %d", rare_path.size());
+
+          fprintf(stderr, "\npath size=%d\n", ex.path().constraints().size());
+          size_t index = 0;
+          while (index < ex.path().constraints().size()) {
+            size_t br_idx = ex.path().constraints_idx()[index];
+            branch_id_t br_id = ex.path().branches()[br_idx];
+            fprintf(stderr, "%d ", br_id);
+            index++;
+          }
+          fprintf(stderr, "\n");
         }
       }
     }
     idx++;
   }
-  fprintf(stderr, "current path size=%d\n", cur_ex.path().constraints().size());
   success_ex_.Swap(ex);
 
   return true;
 }
 
 
+
+////////////////////////////////////////////////////////////////////////
+//// PathGuidedSearch /////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+PathGuidedSearch::PathGuidedSearch(const string& program, int max_iterations)
+  : Search(program, max_iterations) { }
+
+PathGuidedSearch::~PathGuidedSearch() { }
+
+
+void PathGuidedSearch::Run() {
+
+  if (DoSearch()) {
+      vector<value_t> input = success_ex_.inputs();
+      fprintf(stderr, "inputs:\n");
+      for(int i=0; i < input.size(); i++) {
+        fprintf(stderr, "%d ", input.at(i));
+      }
+  }
+}
+
+
+bool PathGuidedSearch::DoSearch() {
+
+  
+  SymbolicExecution ex;
+  vector<value_t> init_input;
+  init_input.push_back(60);
+  init_input.push_back(63);
+  init_input.push_back(120);
+  init_input.push_back(109);
+  init_input.push_back(108);
+  init_input.push_back(32);
+  init_input.push_back(118);
+  init_input.push_back(101);
+  init_input.push_back(114);
+  init_input.push_back(115);
+  init_input.push_back(105);
+  init_input.push_back(111);
+  init_input.push_back(110);
+  init_input.push_back(61);
+  init_input.push_back(34);
+  init_input.push_back(49);
+  init_input.push_back(46);
+  init_input.push_back(48);
+  init_input.push_back(34);
+  init_input.push_back(63);
+  init_input.push_back(62);
+  init_input.push_back(10);
+
+  // 60 97 32 98 61 34 99 34 62 100 60 47 97 62
+  init_input.push_back(60);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(32);
+  init_input.push_back(98);
+  init_input.push_back(61);
+  init_input.push_back(34);
+  init_input.push_back(99);
+  init_input.push_back(34);
+  init_input.push_back(62);
+  init_input.push_back(100);
+  init_input.push_back(60);
+  init_input.push_back(47);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(97);
+  init_input.push_back(62);
+  
+  RunProgram(init_input, &ex);
+
+  // Solve.
+  vector<value_t> input;
+
+  vector<int> rare_path;
+  char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648340 4648352 4648356 4648359 4648368 4648371 4648372 4648379 4648381 4648382 4648385 4648388 4648395 4648399 4648404 4648407 4648410 4648413 4648416 4648419 4648422 4648425 4648428 4648432 4645502 4645509 4645511 4645513 4644237 4644240 4642941 4642944 4642947 4642951 4642954 4642956 4642959 4642962 4642965";
+  //fprintf(stderr, "%s", path);
+  char *token = strtok(path, " ");
+  //fprintf(stderr, "%s", token);
+  // loop through the string to extract all other tokens
+  while( token != NULL ) {
+    //fprintf(stderr, "%s", token);
+    rare_path.push_back(atoi(token));
+    token = strtok(NULL, " ");
+  }
+  
+
+  
+
+  size_t idx = 0;
+  size_t sim_idx = 0;
+  // { // Print the constraints. 
+  //   string tmp;
+  //   for (size_t i = 0; i < ex.path().constraints().size(); i++) {
+  //     tmp.clear();
+  //     ex.path().constraints()[i]->AppendToString(&tmp);
+  //     fprintf(stderr, "%s\n", tmp);
+  //   }
+  // }
+  int found = 0;
+  size_t ex_path_size =  ex.path().constraints().size();
+  fprintf(stderr, "path size=%d\n", ex_path_size);
+  while (idx < ex_path_size) {
+    size_t branch_idx = ex.path().constraints_idx()[idx];
+    branch_id_t bid = ex.path().branches()[branch_idx];
+    if (bid == atoi("4642965")) {
+      found = 1;
+    }
+    fprintf(stderr, "%d ", bid);
+    idx++;
+  }
+  fprintf(stderr, "\n");
+
+  int count = 30;
+  int best_num_rare_path_nodes = 0;
+  int best_num_new_rare_path_nodes = 0;
+  vector<int> rare_path_nodes;
+  while (found == 0 && count >= 1) {
+    //check if some prefix match, if then do not negate those initial branches
+    sim_idx = 0;
+    while (sim_idx < ex_path_size && sim_idx < rare_path.size()) {
+      //fprintf(stderr, "idx=%d\n", idx);
+      size_t branch_idx = ex.path().constraints_idx()[sim_idx];
+      //fprintf(stderr, "branch_idx=%d\n", branch_idx);
+      branch_id_t bid = ex.path().branches()[branch_idx];
+      //fprintf(stderr, "branch_id=%d\n", bid);
+      input.clear();
+      if (bid == rare_path[sim_idx]) {
+        sim_idx++;
+      }
+      else {
+        break;
+      }
+    }
+    //fprintf(stderr, "sim_idx=%d\n", sim_idx);
+    //int idx_count = 10;
+    idx = sim_idx;
+    int could_solve = 0;
+    size_t sim_branch_idx = ex.path().constraints_idx()[sim_idx];
+    branch_id_t sim_bid = ex.path().branches()[sim_branch_idx];
+    branch_id_t selected_bid = sim_bid;
+    size_t selected_idx = sim_idx;
+    while(idx < ex_path_size /*&& idx_count >= 1*/) {
+      //fprintf(stderr, "idx=%d\n", idx);
+      if (!SolveAtBranch(ex, idx, &input)) {
+        //fprintf(stderr, "could not solve!\n");
+        idx++;
+        continue;
+      } else {
+        size_t branch_idx = ex.path().constraints_idx()[idx];
+        branch_id_t bid = ex.path().branches()[branch_idx];
+        //if (bid == 4491872) {
+          printf("Successfully negated a branch (%d) to do further analysis\n", bid);
+        //}
+        could_solve = 1;
+        SymbolicExecution cur_ex;
+        RunProgram(input, &cur_ex);
+
+        size_t cur_path_size =  cur_ex.path().constraints().size();
+        size_t cur_idx = 0;
+        int num_rare_path_nodes = 0;
+        int num_new_rare_path_nodes = 0;
+
+        //if (bid == 4491872) {
+          printf("inputs:\n");
+          for(int i=0; i < input.size(); i++) {
+            printf("%d ", input.at(i));
+          }
+          printf("\n");
+          printf("cur_path_size = %d\n", cur_path_size);
+        //}
+
+        while (cur_idx < cur_path_size) {
+          size_t cur_branch_idx = cur_ex.path().constraints_idx()[cur_idx];
+          branch_id_t cur_bid = cur_ex.path().branches()[cur_branch_idx];
+          //if (bid == 4491872) {
+            printf("%d ", cur_bid);
+          //}
+          if (cur_bid == atoi("4642965")) {
+            found = 1;
+            printf("\n\n\nFound the node!!!\n\n\n");
+            break;
+          }
+          if (std::count(rare_path.begin(), rare_path.end(), cur_bid)) {
+            num_rare_path_nodes++;
+          }
+          if (!(std::count(rare_path_nodes.begin(), rare_path_nodes.end(), cur_bid))) {
+            rare_path_nodes.push_back(cur_bid);
+            num_new_rare_path_nodes++;
+          }
+          cur_idx++;
+        }
+        //if (bid == 4491872) {
+          printf("\nbest_num_rare_path_nodes = %d\n", best_num_rare_path_nodes);
+          printf("num_rare_path_nodes = %d\n", num_rare_path_nodes);
+          //printf("\nbest_num_new_rare_path_nodes = %d\n", best_num_new_rare_path_nodes);
+          //printf("num_new_rare_path_nodes = %d\n", num_new_rare_path_nodes);
+          //exit(0);
+        //}
+        if (num_rare_path_nodes > best_num_rare_path_nodes) {
+          best_num_rare_path_nodes = num_rare_path_nodes;
+          size_t branch_idx = ex.path().constraints_idx()[idx];
+          branch_id_t bid = ex.path().branches()[branch_idx];
+          selected_idx = idx;
+          selected_bid = bid;
+          printf("branch to negate=%d\n", bid);
+          //break;
+        }
+        // if (num_new_rare_path_nodes > best_num_new_rare_path_nodes) {
+        //   best_num_new_rare_path_nodes = num_new_rare_path_nodes;
+        //   size_t branch_idx = ex.path().constraints_idx()[idx];
+        //   branch_id_t bid = ex.path().branches()[branch_idx];
+        //   selected_idx = idx;
+        //   selected_bid = bid;
+        //   printf("branch to negate=%d\n", bid);
+        //   //break;
+        // }
+      }
+      idx++;
+      //idx_count--;
+    }
+    printf("Selected branch for negation: %d", selected_bid);
+    //exit(0);
+    if (could_solve == 0) {
+      fprintf(stderr, "No path is not feasible");
+      return false;
+    } else {
+      fprintf(stderr, "Successfully negated a branch to get closer to the rare path\n");
+      SolveAtBranch(ex, selected_idx, &input);
+      fprintf(stderr, "inputs:\n");
+      for(int i=0; i < input.size(); i++) {
+        fprintf(stderr, "%d ", input.at(i));
+      }
+      fprintf(stderr, "\nRunning program ...");
+      SymbolicExecution cur_ex;
+      RunProgram(input, &cur_ex);
+      fprintf(stderr, "\nCurrent symbolic path size = %d", cur_ex.path().constraints().size());
+      fprintf(stderr, "\nUpdating symbolic path ...");
+      ex.Swap(cur_ex);
+      ex_path_size =  ex.path().constraints().size();
+      fprintf(stderr, "path size=%d\n", ex_path_size);
+      size_t ix = 0;
+      while (ix < ex_path_size) {
+        size_t branch_idx = ex.path().constraints_idx()[ix];
+        branch_id_t bid = ex.path().branches()[branch_idx];
+        if (bid == atoi("4642965")) {
+          found = 1;
+          fprintf(stderr, "\n\n\nFound thenode!!!\n\n\n");
+        }
+        fprintf(stderr, "%d ", bid);
+        ix++;
+      }
+      fprintf(stderr, "\n");
+      //exit(0);
+    }
+    count--;
+  }
+  success_ex_.Swap(ex);
+
+  return true;
+}
 
 
 }  // namespace crest

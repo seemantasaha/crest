@@ -35,13 +35,13 @@ def printHardestPaths():
 	#print(len(sp))
 	for k,v in sp.items():
 		print(str(k[0])+"("+str(k[1])+")"+ ": " + str(v))
-		pathCond = ""
-		path = k[0].split("->")
-		for br in path:
-			if br != "":
-				pathCond += branchStmtCondMap[str(br)] + " and "
-		print(pathCond[:-5])
-		print("\n\n")
+		#pathCond = ""
+		#path = k[0].split("->")
+		#for br in path:
+		#	if br != "":
+		#		pathCond += branchStmtCondMap[str(br)] + " and "
+		#print(pathCond[:-5])
+		#print("\n\n")
 		if count == 0:
 			break
 		count -= 1
@@ -64,11 +64,13 @@ class Node:
 		return self.visited >= loop_bound
 
 class CFG:
-	def __init__(self, cfgPath, branchConstraintsDir):
+	def __init__(self, cfgPath, branchConstraintsDir, depFile):
 		self.cfgPath = cfgPath
 		self.branchConstraintsDir = branchConstraintsDir
+		self.depFile = depFile
 		self.rootNode = 0
 		self.nodeSet = set()
+		self.depLineSet = set()
 		self.nodeIDDict = {}
 		self.nodeLineDict = {}
 		self.nodeProbDict = {}
@@ -159,29 +161,11 @@ class CFG:
 				print(str(item.getID()) + " -> " 
 					+ str(self.nodeEdgeMappingDict[item][0].getID()))
 
-	def traverseCFG(self):
-		#print("traverseCFG")
-		self.runDFS(self.rootNode)
-
-	def runDFS(self, node):
-		#print(node.getID())
-		node.setVisited(True)
-		if node in self.nodeEdgeMappingDict:
-			#print(len(self.nodeEdgeMappingDict[node]))
-			if len(self.nodeEdgeMappingDict[node]) >= 1:
-				#print(self.nodeEdgeMappingDict[node][0].isVisited())
-				if self.nodeEdgeMappingDict[node][0].isVisited() == False: 
-					self.runDFS(self.nodeEdgeMappingDict[node][0])
-		
-			if len(self.nodeEdgeMappingDict[node]) == 2:
-				if self.nodeEdgeMappingDict[node][1].isVisited() == False:
-					self.runDFS(self.nodeEdgeMappingDict[node][1])
-
 	def printAllPathsUtil(self, u, path, startTime):
 		now = datetime.now()
 		delta = now - startTime
-		if delta.total_seconds() >= 108000:
-			#printHardestPaths()
+		if delta.total_seconds() >= 10800:
+			printHardestPaths()
 			exit()
 			#os.system('reboot now')
 		if len(path) >= 60:
@@ -189,9 +173,9 @@ class CFG:
 			return
 		u.setVisited(True)
 		uID = u.getID()
+		#print("Node: " + str(uID))
 		if str(uID) in self.nodeLineDict:
 			path.append(u)
-		#print("u = " + str(u.getID()))
 		if u not in self.nodeEdgeMappingDict:
 			self.computePathProbability(path)
 			#self.computePathNodesProbability(path)
@@ -201,6 +185,8 @@ class CFG:
 			if len(self.nodeEdgeMappingDict[u]) >= 2:
 				leftNodeIDProb = self.nodeProbDict[self.nodeEdgeMappingDict[u][0].getID()]
 				rightNodeIDProb = self.nodeProbDict[self.nodeEdgeMappingDict[u][1].getID()]
+				#print("Left node: " + str(self.nodeEdgeMappingDict[u][0].getID()))
+				#print("Right node: " + str(self.nodeEdgeMappingDict[u][1].getID()))
 				#print("Left node probability: " + str(leftNodeIDProb))
 				#print("Right node probability: " + str(rightNodeIDProb))
 				if leftNodeIDProb > rightNodeIDProb:
@@ -208,16 +194,22 @@ class CFG:
 					probPriorityFlag = True
 			if probPriorityFlag == False and len(self.nodeEdgeMappingDict[u]) >= 1:
 				if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
-					#print("Left of u: " + str(self.nodeEdgeMappingDict[u][0].getID()))
+					#print("Left of " + str(uID) + ": " + str(self.nodeEdgeMappingDict[u][0].getID()))
 					self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
+				else:
+					self.computePathProbability(path)
 			if len(self.nodeEdgeMappingDict[u]) >= 2:
 				if self.nodeEdgeMappingDict[u][1].isVisited() == False:
-					#print("Right of u: " + str(self.nodeEdgeMappingDict[u][1].getID()))
+					#print("Right of " + str(uID) + ": " + str(self.nodeEdgeMappingDict[u][1].getID()))
 					self.printAllPathsUtil(self.nodeEdgeMappingDict[u][1], path, startTime)
+				else:
+					self.computePathProbability(path)
 			if probPriorityFlag == True and len(self.nodeEdgeMappingDict[u]) >= 1:
 				if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
-					#print("Left of u: " + str(self.nodeEdgeMappingDict[u][0].getID()))
+					#print("Left of " + str(uID) + ": " + str(self.nodeEdgeMappingDict[u][0].getID()))
 					self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
+				else:
+					self.computePathProbability(path)
 		if str(uID) in self.nodeLineDict:
 			path.pop()
 		u.setVisited(False)
@@ -238,16 +230,18 @@ class CFG:
 			if str(nodeID) in self.nodeLineDict: # and str(self.nodeLineDict[str(nodeID)]) != "-1":
 				pathNodeStr += str(nodeID) + "->"
 				pathLineStr += str(self.nodeLineDict[str(nodeID)]) + "->"
-				if nodeID in self.nodeProbDict:
+				if nodeID in self.nodeProbDict and str(self.nodeLineDict[str(nodeID)]) in self.depLineSet:
 					pathProb *= self.nodeProbDict[nodeID]
 		#print(pathProb)
+		#print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
+		
 		'''
-		if "->6862" in pathLineStr:
+		if "->8360" in pathLineStr and "->6873" in pathLineStr:
 			print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
 			now = datetime.now()
 			current_time = now.strftime("%H:%M:%S")
 			print("Current Time =", current_time)
-		'''
+		
 		if "->6607" in pathLineStr or "->5421" in pathLineStr or "->5984" in pathLineStr or "->5339" in pathLineStr:
 			print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
 			now = datetime.now()
@@ -256,9 +250,10 @@ class CFG:
 			#print("Exiting the analysis...")
 			#exit()
 			#os.system('reboot now')
+		'''
 		
 		
-		if pathProb > 1.0e-69:
+		if pathProb > 1.0e-50:
 			return
 		#print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
 		hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
@@ -320,28 +315,6 @@ class CFG:
 		#time_diff = now2 - now1
 		#print("time spent: " + str(time_diff.total_seconds()))
 		'''
-		
-	def computePathNodesProbability(self, path):
-		pathStr = "Path using nodes: "
-		pathProb = 1.0
-		for nodeID in path:
-			if str(nodeID) in self.nodeLineDict: # and str(self.nodeLineDict[str(nodeID)]) != "-1":
-				pathNodeStr += str(nodeID) + "->"
-				if nodeID in self.nodeProbDict:
-					pathProb *= self.nodeProbDict[nodeID]
-		#print(pathStr + " : " + str(pathProb))
-		hardestPathsUsingNodes[pathStr] = pathProb
-
-	def computePathLineNumProbability(self, path):
-		pathStr = "Path using lines: "
-		pathProb = 1.0
-		for nodeID in path:
-			if str(nodeID) in self.nodeLineDict: # and str(self.nodeLineDict[str(nodeID)]) != "-1":
-				pathStr += str(self.nodeLineDict[str(nodeID)]) + "->"
-				if nodeID in self.nodeProbDict:
-					pathProb *= self.nodeProbDict[nodeID]
-		#print(pathStr + " : " + str(pathProb))
-		hardestPathsUsingLines[pathStr] = pathProb 
 
 	def modelCount(self, consPath):
 		#print(consPath)
@@ -363,16 +336,16 @@ class CFG:
 		if not os.path.exists(consPath):
 			#print("No constraint for this branch!!! : " + consPath)
 			nodeList = self.nodeEdgeMappingDict[self.nodeIDDict[nodeID]]
-			self.nodeProbDict[nodeList[0].getID()] = 0.5
-			self.nodeProbDict[nodeList[1].getID()] = 0.5
+			self.nodeProbDict[nodeList[0].getID()] = 1.0
+			self.nodeProbDict[nodeList[1].getID()] = 1.0
 			return
 		with open(consPath) as f:
 			lines = f.readlines()
 			for line in lines:
 				if "declare-fun" in line and "xml" in line:
 					nodeList = self.nodeEdgeMappingDict[self.nodeIDDict[nodeID]]
-					self.nodeProbDict[nodeList[0].getID()] = 0.5
-					self.nodeProbDict[nodeList[1].getID()] = 0.5
+					self.nodeProbDict[nodeList[0].getID()] = 1.0
+					self.nodeProbDict[nodeList[1].getID()] = 1.0
 					return
 		#trueCount, flag = self.modelCount(consPath)
 		countPath = consPath.replace("smt2","count")
@@ -389,18 +362,20 @@ class CFG:
 
 		trueProb, falseProb = 0.0, 0.0
 		if flag == "True":
-			trueProb, falseProb = 0.5, 0.5
+			trueProb, falseProb = 1.0, 1.0
 		else:
 			#intDomainSize = self.computeDomain(consPath)
 			intDomainSize = int(part[1])
 			#print("Domain: " + str(intDomainSize))
 			if intDomainSize == 1: #special case that needs to be fixed
-				trueProb = 0.5
+				trueProb = 1.0
+				falseProb = 1.0
 			else:
 				trueProb = trueCount / intDomainSize
+				falseProb = 1.0 - trueProb
 			if trueProb >= 1.0: #temp fix
-				trueProb = 0.5
-			falseProb = 1.0 - trueProb
+				trueProb = 1.0
+				falseProb = 1.0
 		#print(trueProb, falseProb)
 		nodeList = self.nodeEdgeMappingDict[self.nodeIDDict[nodeID]]
 		self.nodeProbDict[nodeList[0].getID()] = trueProb
@@ -451,17 +426,27 @@ class CFG:
 				self.nodeLineDict[trueNodeID] = lineInfo[6].split(":")[1]
 				self.nodeLineDict[falseNodeID] = lineInfo[7].split(":")[1].split("\n")[0]
 
+	def setDependentLineNumbers(self):
+		f = open(self.depFile, "r")
+		content = f.read()
+		lineNumbers = content.split(" ")
+		for line in lineNumbers:
+			self.depLineSet.add(line)
 
-def main(cfgPath,branchConstraintDir):
+
+def main(cfgPath,branchConstraintDir, depFile):
 
 	startTime = datetime.now()
 	current_time = startTime.strftime("%H:%M:%S")
 	print("Current Time =", current_time)
 
-	cfg = CFG(cfgPath,branchConstraintDir)
+	cfg = CFG(cfgPath,branchConstraintDir, depFile)
+
 	cfg.parseCFG()
 	#print("[Done] parsing CFG.")
+
 	cfg.setLineNumbers()
+	cfg.setDependentLineNumbers()
 	#print("[Done] setting line numbers.")
 	#print("CFG:")
 	#cfg.printCFG()
@@ -495,7 +480,7 @@ def main(cfgPath,branchConstraintDir):
 	'''
 	funcRootNode = 4648324
 	cfg.setRootNode(funcRootNode)
-	#cfg.traverseCFG()
+
 	cfg.printAllPaths(cfg.getRootNode(), startTime)
 
 	printHardestPaths()
@@ -513,5 +498,7 @@ if __name__ == "__main__":
                         help='the path to cfg file')
     parser.add_argument('--branch_constraints_dir', metavar='dir', required=True,
                         help='path to the directory of all branch constraints')
+    parser.add_argument('--dependent_node_file', metavar='path', required=False,
+                        help='path to the file of taint analysis result')
     args = parser.parse_args()
-    main(cfgPath=args.cfg_path, branchConstraintDir=args.branch_constraints_dir)
+    main(cfgPath=args.cfg_path, branchConstraintDir=args.branch_constraints_dir, depFile=args.dependent_node_file)

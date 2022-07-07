@@ -291,6 +291,19 @@ class PathDirectedSearch : public Search {
   bool DoSearch();
 };
 
+class PathGuidedSearch : public Search {
+ public:
+  PathGuidedSearch(const string& program, int max_iterations);
+  virtual ~PathGuidedSearch();
+
+  virtual void Run();
+
+ private:
+  SymbolicExecution success_ex_;
+
+  bool DoSearch();
+};
+
 }  // namespace crest
 
 #endif  // RUN_CREST_CONCOLIC_SEARCH_H__

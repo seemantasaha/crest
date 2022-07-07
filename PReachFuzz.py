@@ -87,9 +87,10 @@ class CFG:
 				self.nodeSet.add(falseNode)
 				self.edgeSet.add((startNode,falseNode))
 				self.nodeWithIncomingEdgeSet.add(falseNode)
-				self.nodeEdgeMappingDict[startNode].append(falseNode)
-				#branching node, so we need to compute probability from branch constraints
-				self.processBranchConstraints(startNode)
+				if startNode in self.nodeEdgeMappingDict:
+					self.nodeEdgeMappingDict[startNode].append(falseNode)
+					#branching node, so we need to compute probability from branch constraints
+					self.processBranchConstraints(startNode)
 
 
 	def getRootNode(self):
@@ -199,7 +200,7 @@ class CFG:
 		print(consPath)
 		process = subprocess.Popen(["abc", "-i", consPath, "-bi", "15", "-v", "0"], stdout = subprocess.PIPE)
 		result = process.communicate()[0].decode('utf-8')
-		process.terminate()
+		#process.terminate()
 		print(result)
 		lines = result.split('\n');
 		print(lines)
@@ -256,19 +257,21 @@ class CFG:
 
 	def processBranchConstraints(self, branchNode):
 		nodeID = branchNode.getID()
-		consPath = self.branchConstraintsDir + "/" + "branch_" + str(nodeID) + ".smt2"
-		self.computeBranchProbability(nodeID, consPath)
+		if nodeID >= 671635 and nodeID <= 677065:
+			consPath = self.branchConstraintsDir + "/" + "branch_" + str(nodeID) + ".smt2"
+			self.computeBranchProbability(nodeID, consPath)
 
 	def setLineNumbers(self):
 		branchesPath = self.branchConstraintsDir + "/" + "branch_statements"
 		branchesFile = open(branchesPath, 'r')
 		lines = branchesFile.readlines()
 		for line in lines[1:]:
-			lineInfo = line.split(", ")
-			trueNodeID = lineInfo[2]
-			falseNodeID = lineInfo[3]
-			self.nodeLineDict[trueNodeID] = lineInfo[6].split(":")[1]
-			self.nodeLineDict[falseNodeID] = lineInfo[7].split(":")[1].split("\n")[0]
+			if not line.startswith("Expression"):
+				lineInfo = line.split(", ")
+				trueNodeID = lineInfo[2]
+				falseNodeID = lineInfo[3]
+				self.nodeLineDict[trueNodeID] = lineInfo[6].split(":")[1]
+				self.nodeLineDict[falseNodeID] = lineInfo[7].split(":")[1].split("\n")[0]
 
 
 def main(cfgPath,branchConstraintDir):
@@ -282,13 +285,14 @@ def main(cfgPath,branchConstraintDir):
 	stmtFile = open(branchStmtsPath, 'r')
 	lines = stmtFile.readlines()
 	for line in lines:
-		lineInfo = line.split("\n")[0].split(", ")
-		cond = lineInfo[0]
-		b1 = lineInfo[2]
-		b2 = lineInfo[3]
-		#print((cond,b1,b2))
-		branchStmtCondMap[b1] = "(" + cond + ")"
-		branchStmtCondMap[b2] = "(not (" + cond + ")"
+		if not line.startswith("Expression"):
+			lineInfo = line.split("\n")[0].split(", ")
+			cond = lineInfo[0]
+			b1 = lineInfo[2]
+			b2 = lineInfo[3]
+			#print((cond,b1,b2))
+			branchStmtCondMap[b1] = "(" + cond + ")"
+			branchStmtCondMap[b2] = "(not (" + cond + ")"
 
 	cfgFunMapPath = cfgPath + "_func_map"
 	funcFile = open(cfgFunMapPath, 'r')
@@ -297,10 +301,11 @@ def main(cfgPath,branchConstraintDir):
 		lineInfo = line.split("\n")[0].split(" ")
 		funcName = lineInfo[0]
 		funcRootNode = lineInfo[1]
-		#print("Root node: " + funcRootNode)
-		cfg.setRootNode(funcRootNode)
-		cfg.traverseCFG()
-		cfg.printAllPaths(cfg.getRootNode())
+		if funcName == "main" and funcRootNode == "671635": #strings.c
+			#print("Root node: " + funcRootNode)
+			cfg.setRootNode(funcRootNode)
+			cfg.traverseCFG()
+			cfg.printAllPaths(cfg.getRootNode())
 
 	#sp = collections.OrderedDict(sorted(hardestPaths.items()))
 	sp = dict(sorted(hardestPaths.items(), key=lambda item: item[1]))
