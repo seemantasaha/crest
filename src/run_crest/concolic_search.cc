@@ -1600,9 +1600,9 @@ void PathGuidedSearch::Run() {
 
   if (DoSearch()) {
       vector<value_t> input = success_ex_.inputs();
-      fprintf(stderr, "inputs:\n");
+      printf("inputs:\n");
       for(int i=0; i < input.size(); i++) {
-        fprintf(stderr, "%d ", input.at(i));
+        printf("%d ", input.at(i));
       }
   }
 }
@@ -1676,7 +1676,9 @@ bool PathGuidedSearch::DoSearch() {
   vector<value_t> input;
 
   vector<int> rare_path;
-  char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648340 4648352 4648356 4648359 4648368 4648371 4648372 4648379 4648381 4648382 4648385 4648388 4648395 4648399 4648404 4648407 4648410 4648413 4648416 4648419 4648422 4648425 4648428 4648432 4645502 4645509 4645511 4645513 4644237 4644240 4642941 4642944 4642947 4642951 4642954 4642956 4642959 4642962 4642965";
+  //char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648340 4648352 4648356 4648359 4648368 4648371 4648372 4648379 4648381 4648382 4648385 4648388 4648395 4648399 4648404 4648407 4648410 4648413 4648416 4648419 4648422 4648425 4648428 4648432 4645502 4645509 4645511 4645513 4644237 4644240 4642941 4642944 4642947 4642951 4642954 4642956 4642959 4642962 4642965";
+  //char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648341 4648344 4648348 4648349 4648361 4648375 4648379 4648381 4648382 4648390 4648395 4648398 4648404 4648407 4648410 4648413 4648416 4648419 4648422 4648425 4648428 4648432 4648436 4648440 4648443 4648445 4648451 4648463 4648466 4648473 4648478 4648481 4648484 4648488 4648491 4648494 4648495 4648498 4648501 4648504 4648508";
+  char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648340 4648352 4648038 4648045 4637122 4637123 4637126 4637132 4637133 4637135 4637136 4637138 4648061 4648084 4648087 4648091 4648092 4648096 4648099 4648102 4648109 4648122 4648125 4648129 4648133 4648136 4648140 4648141 4648145 4648148 4648164 4648169 4648172 4637079 4637081 4637084 4637087 4637091 4637102 4637105 4650387 4650394 4650398 4650401 4650406 4648356 4648357";
   //fprintf(stderr, "%s", path);
   char *token = strtok(path, " ");
   //fprintf(stderr, "%s", token);
@@ -1702,14 +1704,14 @@ bool PathGuidedSearch::DoSearch() {
   // }
   int found = 0;
   size_t ex_path_size =  ex.path().constraints().size();
-  fprintf(stderr, "path size=%d\n", ex_path_size);
+  printf("path size=%d\n", ex_path_size);
   while (idx < ex_path_size) {
     size_t branch_idx = ex.path().constraints_idx()[idx];
     branch_id_t bid = ex.path().branches()[branch_idx];
-    if (bid == atoi("4642965")) {
-      found = 1;
-    }
-    fprintf(stderr, "%d ", bid);
+    // if (bid == atoi("4642965")) {
+    //   found = 1;
+    // }
+    printf("%d ", bid);
     idx++;
   }
   fprintf(stderr, "\n");
@@ -1718,35 +1720,39 @@ bool PathGuidedSearch::DoSearch() {
   int best_num_rare_path_nodes = 0;
   int best_num_new_rare_path_nodes = 0;
   vector<int> rare_path_nodes;
-  while (found == 0 && count >= 1) {
-    //check if some prefix match, if then do not negate those initial branches
-    sim_idx = 0;
-    while (sim_idx < ex_path_size && sim_idx < rare_path.size()) {
-      //fprintf(stderr, "idx=%d\n", idx);
-      size_t branch_idx = ex.path().constraints_idx()[sim_idx];
-      //fprintf(stderr, "branch_idx=%d\n", branch_idx);
-      branch_id_t bid = ex.path().branches()[branch_idx];
-      //fprintf(stderr, "branch_id=%d\n", bid);
-      input.clear();
-      if (bid == rare_path[sim_idx]) {
-        sim_idx++;
-      }
-      else {
-        break;
-      }
+
+  //check if some prefix match, if then do not negate those initial branches
+  sim_idx = 0;
+  while (sim_idx < ex_path_size && sim_idx < rare_path.size()) {
+    //fprintf(stderr, "idx=%d\n", idx);
+    size_t branch_idx = ex.path().constraints_idx()[sim_idx];
+    //fprintf(stderr, "branch_idx=%d\n", branch_idx);
+    branch_id_t bid = ex.path().branches()[branch_idx];
+    //fprintf(stderr, "branch_id=%d\n", bid);
+    input.clear();
+    if (bid == rare_path[sim_idx]) {
+      sim_idx++;
     }
-    //fprintf(stderr, "sim_idx=%d\n", sim_idx);
-    //int idx_count = 10;
-    idx = sim_idx;
+    else {
+      break;
+    }
+  }
+
+  idx = sim_idx;
+
+  while (found == 0 && count >= 1) {
+    
     int could_solve = 0;
-    size_t sim_branch_idx = ex.path().constraints_idx()[sim_idx];
-    branch_id_t sim_bid = ex.path().branches()[sim_branch_idx];
-    branch_id_t selected_bid = sim_bid;
-    size_t selected_idx = sim_idx;
-    while(idx < ex_path_size /*&& idx_count >= 1*/) {
-      //fprintf(stderr, "idx=%d\n", idx);
+    size_t branch_idx = ex.path().constraints_idx()[idx];
+    branch_id_t bid = ex.path().branches()[branch_idx];
+    branch_id_t selected_bid = bid;
+    printf("selected branch id = %d\n", bid);
+    size_t selected_idx = idx;
+    
+    while(idx < ex_path_size) {
+      printf("idx=%d\n", idx);
       if (!SolveAtBranch(ex, idx, &input)) {
-        //fprintf(stderr, "could not solve!\n");
+        printf("could not solve!\n");
         idx++;
         continue;
       } else {
@@ -1779,17 +1785,17 @@ bool PathGuidedSearch::DoSearch() {
           //if (bid == 4491872) {
             printf("%d ", cur_bid);
           //}
-          if (cur_bid == atoi("4642965")) {
-            found = 1;
-            printf("\n\n\nFound the node!!!\n\n\n");
-            break;
-          }
+          // if (cur_bid == atoi("4642965")) {
+          //   found = 1;
+          //   printf("\n\n\nFound the node!!!\n\n\n");
+          //   //break;
+          // }
           if (std::count(rare_path.begin(), rare_path.end(), cur_bid)) {
             num_rare_path_nodes++;
-          }
-          if (!(std::count(rare_path_nodes.begin(), rare_path_nodes.end(), cur_bid))) {
-            rare_path_nodes.push_back(cur_bid);
-            num_new_rare_path_nodes++;
+            // if (!(std::count(rare_path_nodes.begin(), rare_path_nodes.end(), cur_bid))) {
+            //   rare_path_nodes.push_back(cur_bid);
+            //   num_new_rare_path_nodes++;
+            // }
           }
           cur_idx++;
         }
@@ -1797,7 +1803,7 @@ bool PathGuidedSearch::DoSearch() {
           printf("\nbest_num_rare_path_nodes = %d\n", best_num_rare_path_nodes);
           printf("num_rare_path_nodes = %d\n", num_rare_path_nodes);
           //printf("\nbest_num_new_rare_path_nodes = %d\n", best_num_new_rare_path_nodes);
-          //printf("num_new_rare_path_nodes = %d\n", num_new_rare_path_nodes);
+          printf("num_new_rare_path_nodes = %d\n", num_new_rare_path_nodes);
           //exit(0);
         //}
         if (num_rare_path_nodes > best_num_rare_path_nodes) {
@@ -1809,7 +1815,7 @@ bool PathGuidedSearch::DoSearch() {
           printf("branch to negate=%d\n", bid);
           //break;
         }
-        // if (num_new_rare_path_nodes > best_num_new_rare_path_nodes) {
+        // else if (num_new_rare_path_nodes > best_num_new_rare_path_nodes) {
         //   best_num_new_rare_path_nodes = num_new_rare_path_nodes;
         //   size_t branch_idx = ex.path().constraints_idx()[idx];
         //   branch_id_t bid = ex.path().branches()[branch_idx];
@@ -1822,41 +1828,48 @@ bool PathGuidedSearch::DoSearch() {
       idx++;
       //idx_count--;
     }
-    printf("Selected branch for negation: %d", selected_bid);
+    printf("\nSelected branch for negation: %d\n", selected_bid);
+    printf("could_solve = %d\n", could_solve);
     //exit(0);
     if (could_solve == 0) {
-      fprintf(stderr, "No path is not feasible");
+      printf("No path is not feasible");
       return false;
     } else {
-      fprintf(stderr, "Successfully negated a branch to get closer to the rare path\n");
+      printf("idx before = %d\n", idx);
+      idx = selected_idx + 1; //to start negating from this point in the next iteration
+      printf("idx after = %d\n", idx);
+      printf("Successfully negated a branch to get closer to the rare path\n");
       SolveAtBranch(ex, selected_idx, &input);
-      fprintf(stderr, "inputs:\n");
+      printf("inputs:\n");
       for(int i=0; i < input.size(); i++) {
-        fprintf(stderr, "%d ", input.at(i));
+        printf("%d ", input.at(i));
       }
-      fprintf(stderr, "\nRunning program ...");
+      printf("\nRunning program ...");
       SymbolicExecution cur_ex;
       RunProgram(input, &cur_ex);
-      fprintf(stderr, "\nCurrent symbolic path size = %d", cur_ex.path().constraints().size());
-      fprintf(stderr, "\nUpdating symbolic path ...");
+      printf("\nCurrent symbolic path size = %d", cur_ex.path().constraints().size());
+      printf("\nUpdating symbolic path ...");
       ex.Swap(cur_ex);
       ex_path_size =  ex.path().constraints().size();
-      fprintf(stderr, "path size=%d\n", ex_path_size);
+      printf("path size=%d\n", ex_path_size);
       size_t ix = 0;
       while (ix < ex_path_size) {
         size_t branch_idx = ex.path().constraints_idx()[ix];
         branch_id_t bid = ex.path().branches()[branch_idx];
-        if (bid == atoi("4642965")) {
-          found = 1;
-          fprintf(stderr, "\n\n\nFound thenode!!!\n\n\n");
-        }
-        fprintf(stderr, "%d ", bid);
+        // if (bid == atoi("4642965")) {
+        //   found = 1;
+        //   fprintf(stderr, "\n\n\nFound the node finally!!!\n\n\n");
+        // }
+        printf("%d ", bid);
         ix++;
       }
-      fprintf(stderr, "\n");
+      printf("\n");
       //exit(0);
     }
     count--;
+    printf("count = %d\n", count);
+    printf("ex path size = %d\n", ex_path_size);
+    printf("idx = %d\n", idx);
   }
   success_ex_.Swap(ex);
 
