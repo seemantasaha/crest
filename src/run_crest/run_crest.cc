@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
   } else if (search_type == "-pde") {
     strategy = new crest::PathDirectedSearch(prog, num_iters);
   } else if (search_type == "-pge") {
-    strategy = new crest::PathGuidedSearch(prog, num_iters);
+    strategy = new crest::PathGuidedSearch(prog, num_iters, argv[4]);
   } else if (search_type == "-uniform_random") {
     if (argc == 4) {
       strategy = new crest::UniformRandomSearch(prog, num_iters, 100000000);

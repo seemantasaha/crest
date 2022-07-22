@@ -293,12 +293,13 @@ class PathDirectedSearch : public Search {
 
 class PathGuidedSearch : public Search {
  public:
-  PathGuidedSearch(const string& program, int max_iterations);
+  explicit PathGuidedSearch(const string& program, int max_iterations, string path);
   virtual ~PathGuidedSearch();
 
   virtual void Run();
 
  private:
+  string path_; 
   SymbolicExecution success_ex_;
 
   bool DoSearch();
