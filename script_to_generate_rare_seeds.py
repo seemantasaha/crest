@@ -8,15 +8,22 @@ desired_paths = []
 def similar(a, b):
     return fuzz.ratio(a, b)
 
-def main(logDir):
+def main(pathDir, projectDir, binaryWithArg):
     num_files = 0
     total_desired_paths = []
-    for filename in os.listdir(logDir):
-        with open(os.path.join(logDir, filename), 'r') as f:
+    logDir = projectDir + "/ex_log"
+
+    print("Path directory: "+ pathDir)
+    print("Project directory: "+ projectDir)
+    print("Log directory: "+ logDir)
+
+    for filename in os.listdir(pathDir):
+        print("Processing ... " + filename)
+        with open(os.path.join(pathDir, filename), 'r') as f:
             paths = f.readlines()
             desired_paths = []
             desired_paths.append(paths[0])
-            count = 0
+            count = 1
             for path1 in paths[1:]:
                 addFlag = True
                 removeAddFlag = False
@@ -35,7 +42,7 @@ def main(logDir):
                 elif addFlag == True:
                     desired_paths.append(path1)
                     count += 1
-            #print("Number of paths to consider: " + str(count))
+            print("Number of paths to consider: " + str(count))
             num_files += 1
             total_desired_paths.extend(desired_paths)
 
@@ -56,10 +63,11 @@ def main(logDir):
 
     count = 100
 
-    if not os.path.exists('/home/seem/Research/libxml2/ex_log'):
-        os.makedirs('/home/seem/Research/libxml2/ex_log')
+    if not os.path.exists(logDir):
+        os.makedirs(logDir)
     else:
-        os.system("rm /home/seem/Research/libxml2/ex_log/*")
+        rmCommand = "rm " + logDir + "/*"
+        os.system(rmCommand)
 
     num = 1
     for k,v in sp.items():
@@ -67,7 +75,7 @@ def main(logDir):
         path_node = path_node.strip()
         path_node = path_node.replace("->"," ")
         
-        command = "cd /home/seem/Research/libxml2 && time ../crest/bin/run_crest './xmllint test.xml' 10 -pge \"" + path_node[:-1] + "\" > /home/seem/Research/libxml2/ex_log/log_" + str(num) + ".txt"
+        command = "cd " + projectDir + " && time ../crest/bin/run_crest '" + binaryWithArg + "' 10 -pge \"" + path_node[:-1] + "\" > " + logDir + "/log_" + str(num) + ".txt"
         print(command)
 
         os.system(command)
@@ -82,8 +90,8 @@ def main(logDir):
     log = ""
     log_set = set()
 
-    for filename in os.listdir("/home/seem/Research/libxml2/ex_log"):
-        with open(os.path.join("/home/seem/Research/libxml2/ex_log", filename), 'r') as f:
+    for filename in os.listdir(logDir):
+        with open(os.path.join(logDir, filename), 'r') as f:
             print("File: " + str(filename))
             lines = f.readlines()
         
@@ -100,9 +108,15 @@ def main(logDir):
                     break
                 following_line = line
 
+    #convert rare seeds from ascii to string
+    ascii_vals = log.split()
+    logString = ""
+    for asc in ascii_vals:
+        logString += chr(int(asc)) 
+
     filename = "rare_seeds.txt"
     f = open(filename, "w")
-    f.write(log)
+    f.write(logString)
     f.close()
 
 
@@ -111,7 +125,9 @@ if __name__ == "__main__":
 
     import argparse
 
-    parser = argparse.ArgumentParser(description='Provide the log directory of all paths...')
-    parser.add_argument('--log_dir', metavar='dir', required=True, help='the directory containing all paths')
+    parser = argparse.ArgumentParser(description='Provide the path directory, project directory and binary with arguments...')
+    parser.add_argument('--path_dir', metavar='dir', required=True, help='the path directory')
+    parser.add_argument('--project_dir', metavar='dir', required=True, help='the project directory')
+    parser.add_argument('--bin_args', metavar='path', required=True, help='the binary and arguments if any')
     args = parser.parse_args()
-    main(logDir=args.log_dir)
+    main(pathDir=args.path_dir,projectDir=args.project_dir,binaryWithArg=args.bin_args)
