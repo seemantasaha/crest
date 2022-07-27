@@ -8,11 +8,14 @@ from datetime import datetime
 from difflib import SequenceMatcher
 from fuzzywuzzy import fuzz
 
+
+
 hardestPaths = {}
 hardestPathsUsingNodes = {}
 hardestPathsUsingLines = {}
 lastPathNodeStr = ""
 lastPathLineStr = ""
+checkpath = set()
 
 pathPrefixDict = {}
 pathPrefixPathDict = {}
@@ -20,6 +23,36 @@ pathPrefixPathDict = {}
 branchStmtCondMap = {}
 
 loop_bound = 1
+
+numPath = 0
+log = ""
+count = 1
+
+def printString(string):
+	global numPath
+	global log
+	global count
+	numPath += 1
+	if numPath >= 5000:
+		filename = "logs/paths_upto_" + str(count) + ".txt"
+		f = open(filename, "w")
+		f.write(log)
+		f.close()
+		print("File written up to line: " + str(count))
+		log = ""
+		numPath = 0
+	log += str(string) + "\n"
+	count += 1
+
+def writeRemainingLogs():
+	global numPath
+	global count
+	if log != "":
+		filename = "logs/paths_upto_" + str(count) + ".txt"
+		f = open(filename, "w")
+		f.write(log)
+		f.close()
+		print("File written up to line: " + str(count))
 
 def similar(a, b):
     #return SequenceMatcher(None, a, b).ratio()
@@ -78,6 +111,9 @@ class CFG:
 		self.nodeWithIncomingEdgeSet = set()
 		self.edgeSet = set()
 		self.nodeEdgeMappingDict = {}
+		self.funcStartingNodes = set()
+		self.funcReturningNode = []
+		self.returningNodeMap = {}
 
 	def setRootNode(self, rootNode):
 		self.rootNode = self.nodeIDDict[int(rootNode)]
@@ -164,8 +200,10 @@ class CFG:
 	def printAllPathsUtil(self, u, path, startTime):
 		now = datetime.now()
 		delta = now - startTime
-		if delta.total_seconds() >= 10800:
-			printHardestPaths()
+		if delta.total_seconds() >= 8640:
+			#print("Number of unique paths: " + str(len(checkpath)))
+			#printHardestPaths()
+			writeRemainingLogs()
 			exit()
 			#os.system('reboot now')
 		if len(path) >= 60:
@@ -173,15 +211,37 @@ class CFG:
 			return
 		u.setVisited(True)
 		uID = u.getID()
+		
 		#print("Node: " + str(uID))
+		'''
+		if len(self.funcReturningNode) == 0:
+			print("Function Returning Node: None")
+		elif u in self.returningNodeMap:
+			print("Function Returning Node: " + str(self.returningNodeMap[u].getID()))
+		else:
+			print("Function Returning Node: " + str(self.funcReturningNode[-1].getID()))
+		'''
 		if str(uID) in self.nodeLineDict:
 			path.append(u)
+
 		if u not in self.nodeEdgeMappingDict:
-			self.computePathProbability(path)
-			#self.computePathNodesProbability(path)
-			#self.computePathLineNumProbability(path)
+			if not len(self.funcReturningNode) == 0:
+				#print("Function call ends and returning to " + str(self.funcReturningNode[-1].getID()))
+				tempReturningNode = self.funcReturningNode[-1]
+				self.returningNodeMap[u] = self.funcReturningNode[-1]
+				self.funcReturningNode.pop()
+				#print("Going to " + str(tempReturningNode.getID()) + "as returning node")
+				self.printAllPathsUtil(tempReturningNode, path, startTime)
+			elif u in self.returningNodeMap:
+				#print("Going to " + str(self.returningNodeMap[u].getID()))
+				self.printAllPathsUtil(self.returningNodeMap[u], path, startTime)
+			else:
+				self.computePathProbability(path)
 		elif u in self.nodeEdgeMappingDict:
 			probPriorityFlag = False
+
+			#print("Length: " + str(len(self.nodeEdgeMappingDict[u])))
+
 			if len(self.nodeEdgeMappingDict[u]) >= 2:
 				leftNodeIDProb = self.nodeProbDict[self.nodeEdgeMappingDict[u][0].getID()]
 				rightNodeIDProb = self.nodeProbDict[self.nodeEdgeMappingDict[u][1].getID()]
@@ -192,26 +252,43 @@ class CFG:
 				if leftNodeIDProb > rightNodeIDProb:
 					#print("probPriorityFlag")
 					probPriorityFlag = True
-			if probPriorityFlag == False and len(self.nodeEdgeMappingDict[u]) >= 1:
-				if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
-					#print("Left of " + str(uID) + ": " + str(self.nodeEdgeMappingDict[u][0].getID()))
-					self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
+
+			if probPriorityFlag == False:				
+				if len(self.nodeEdgeMappingDict[u]) >= 2:
+					if self.nodeEdgeMappingDict[u][0].isVisited() == False:
+							#print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID()))
+							self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
+					#print("Left node done, now right node")
+					if self.nodeEdgeMappingDict[u][1].isVisited() == False:
+						if str(self.nodeEdgeMappingDict[u][1].getID()) in self.funcStartingNodes:
+							self.funcReturningNode.append(self.nodeEdgeMappingDict[u][0])
+						#print("Going to " + str(self.nodeEdgeMappingDict[u][1].getID()))
+						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][1], path, startTime)
 				else:
-					self.computePathProbability(path)
-			if len(self.nodeEdgeMappingDict[u]) >= 2:
-				if self.nodeEdgeMappingDict[u][1].isVisited() == False:
-					#print("Right of " + str(uID) + ": " + str(self.nodeEdgeMappingDict[u][1].getID()))
-					self.printAllPathsUtil(self.nodeEdgeMappingDict[u][1], path, startTime)
+					if self.nodeEdgeMappingDict[u][0].isVisited() == False:
+						#print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID())) 
+						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
+					#print("Left node done, no right node")
+			else:
+				if len(self.nodeEdgeMappingDict[u]) >= 2:
+					if self.nodeEdgeMappingDict[u][1].isVisited() == False:
+						if str(self.nodeEdgeMappingDict[u][1].getID()) in self.funcStartingNodes:
+							self.funcReturningNode.append(self.nodeEdgeMappingDict[u][0])
+						#print("Going to " + str(self.nodeEdgeMappingDict[u][1].getID())) 
+						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][1], path, startTime)
+					#print("Right node done, now left node")
+					if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
+						#print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID())) 
+						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
 				else:
-					self.computePathProbability(path)
-			if probPriorityFlag == True and len(self.nodeEdgeMappingDict[u]) >= 1:
-				if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
-					#print("Left of " + str(uID) + ": " + str(self.nodeEdgeMappingDict[u][0].getID()))
-					self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
-				else:
-					self.computePathProbability(path)
+					if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
+						#print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID())) 
+						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
+					#print("Left node done, no right node")
+
 		if str(uID) in self.nodeLineDict:
 			path.pop()
+			
 		u.setVisited(False)
 
 	def printAllPaths(self, s, startTime):
@@ -230,91 +307,24 @@ class CFG:
 			if str(nodeID) in self.nodeLineDict: # and str(self.nodeLineDict[str(nodeID)]) != "-1":
 				pathNodeStr += str(nodeID) + "->"
 				pathLineStr += str(self.nodeLineDict[str(nodeID)]) + "->"
-				if nodeID in self.nodeProbDict and str(self.nodeLineDict[str(nodeID)]) in self.depLineSet:
-					pathProb *= self.nodeProbDict[nodeID]
-		#print(pathProb)
-		#print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
-		
-		'''
-		if "->8360" in pathLineStr and "->6873" in pathLineStr:
-			print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
-			now = datetime.now()
-			current_time = now.strftime("%H:%M:%S")
-			print("Current Time =", current_time)
-		'''
-		if "->6607" in pathLineStr or "->5421" in pathLineStr or "->5984" in pathLineStr or "->5339" in pathLineStr:
-			print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
-			now = datetime.now()
-			current_time = now.strftime("%H:%M:%S")
-			print("Current Time =", current_time)
-			#print("Exiting the analysis...")
-			#exit()
-			#os.system('reboot now')
-		#'''
-		
-		
-		if pathProb > 1.0e-50:
-			return
-		#print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
-		hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
+				if nodeID in self.nodeProbDict: 
+					if len(self.depLineSet) == 0:
+						pathProb *= self.nodeProbDict[nodeID]
+					elif str(self.nodeLineDict[str(nodeID)]) in self.depLineSet:
+						pathProb *= self.nodeProbDict[nodeID]
+					else:
+						pass
 
-		# code to not add the similar path as the immediate last path
-		#addFlag = True
-		#removeAddFlag = False
+		if pathProb > 1.0e-35:
+			return
 		
-		'''
-		global lastPathNodeStr
-		global lastPathLineStr
-		#print("Last path: " +  lastPathNodeStr)
-		#print("Current path: " +  pathNodeStr)
-		sim = similar(lastPathNodeStr,pathNodeStr)
-		#print("similarity:" + str(sim))
-		if sim >= 80:
-			addFlag = False
-			if(len(pathNodeStr) > len(lastPathNodeStr)):
-				removeAddFlag = True
-		if addFlag:
-			lastPathNodeStr, lastPathLineStr = pathNodeStr, pathLineStr
-			hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
-		elif removeAddFlag:
-			#print("Removed key")
-			if (lastPathNodeStr, lastPathLineStr) in hardestPaths:
-				del hardestPaths[(lastPathNodeStr, lastPathLineStr)]
-			hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
-			lastPathNodeStr, lastPathLineStr = pathNodeStr, pathLineStr
-		else:
-			pass
-		'''
+		printString(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
 		
-		#now1 = datetime.now()
-		#similarPathNodeStr=""
-		'''
-		for key in hardestPaths:
-			sim = similar(key[0],pathNodeStr)
-			if sim >= 90:
-				similarPathNodeStr = pathNodeStr
-				addFlag = False
-				#print(len(pathNodeStr))
-				#print(len(similarPathNodeStr))
-				if len(pathNodeStr) > len(similarPathNodeStr):
-					removeAddFlag = True
-				break;
-		#print(similarPathNodeStr)
-		#print(pathNodeStr)
-		#print(addFlag)
-		#print(removeAddFlag)
-		if addFlag:
-			hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
-		elif removeAddFlag:
-			del hardestPaths[key]
-			hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
-		else:
-			pass
-		#print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
-		#now2 = datetime.now()
-		#time_diff = now2 - now1
-		#print("time spent: " + str(time_diff.total_seconds()))
-		'''
+		if "->6607" in pathLineStr or "->5421" in pathLineStr or "->5984" in pathLineStr or "->5339" in pathLineStr:
+			#printString(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
+			now = datetime.now()
+			current_time = now.strftime("%H:%M:%S")
+			print("Current Time =", current_time)
 
 	def modelCount(self, consPath):
 		#print(consPath)
@@ -407,9 +417,9 @@ class CFG:
 	def processBranchConstraints(self, branchNode):
 		nodeID = branchNode.getID()
 		#print("processing constraint for branch: " + str(nodeID))
-		if nodeID >= 4635458 and nodeID <= 4652062:
-			consPath = self.branchConstraintsDir + "/" + "branch_" + str(nodeID) + ".smt2"
-			self.computeBranchProbability(nodeID, consPath)
+		#if nodeID >= 4635458 and nodeID <= 4652062:
+		consPath = self.branchConstraintsDir + "/" + "branch_" + str(nodeID) + ".smt2"
+		self.computeBranchProbability(nodeID, consPath)
 
 	def setLineNumbers(self):
 		branchesPath = self.branchConstraintsDir + "/" + "branch_statements"
@@ -432,6 +442,13 @@ class CFG:
 		lineNumbers = content.split(" ")
 		for line in lineNumbers:
 			self.depLineSet.add(line)
+		
+	def setFuncStartingNodes(self):
+		f = open(self.cfgPath+"_func_map", "r")
+		content = f.readlines()
+		for con in content:
+			self.funcStartingNodes.add(con.strip().split(" ")[1])
+		print("Number of functions: " + str(len(self.funcStartingNodes)))
 
 
 def main(cfgPath,branchConstraintDir, depFile):
@@ -443,10 +460,12 @@ def main(cfgPath,branchConstraintDir, depFile):
 	cfg = CFG(cfgPath,branchConstraintDir, depFile)
 
 	cfg.parseCFG()
+	cfg.setFuncStartingNodes()
 	#print("[Done] parsing CFG.")
 
 	cfg.setLineNumbers()
-	cfg.setDependentLineNumbers()
+	if depFile != None:
+		cfg.setDependentLineNumbers()
 	#print("[Done] setting line numbers.")
 	#print("CFG:")
 	#cfg.printCFG()
@@ -479,11 +498,20 @@ def main(cfgPath,branchConstraintDir, depFile):
 			cfg.printAllPaths(cfg.getRootNode())
 	'''
 	funcRootNode = 4648324
+	#funcRootNode = 4648367
+	#funcRootNode = 4648353
+	#funcRootNode = 2331618
+	#funcRootNode = 24
+	#funcRootNode = 270342
+	
 	cfg.setRootNode(funcRootNode)
 
 	cfg.printAllPaths(cfg.getRootNode(), startTime)
 
-	printHardestPaths()
+	writeRemainingLogs()
+
+	#print("Numer of unique paths: " + str(len(checkpath)))
+	#printHardestPaths()
 
 if __name__ == "__main__":
     

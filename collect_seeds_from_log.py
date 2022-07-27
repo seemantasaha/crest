@@ -1,13 +1,15 @@
-import sys
 import os
+import sys
 
 log = ""
 log_set = set()
-for filename in os.listdir("ex_log"):
-    with open(os.path.join("ex_log", filename), 'r') as f:
+
+logDir = "/home/seem/Research/libxml2/ex_log"
+for filename in os.listdir(logDir):
+    with open(os.path.join(logDir, filename), 'r') as f:
         print("File: " + str(filename))
         lines = f.readlines()
-       
+    
         lines_reverse = lines[::-1]
         following_line = ""
         for line in lines_reverse:
@@ -21,7 +23,14 @@ for filename in os.listdir("ex_log"):
                 break
             following_line = line
 
-filename = "combined_rare_seeds.txt"
+#convert rare seeds from ascii to string
+ascii_vals = log.split()
+logString = ""
+for asc in ascii_vals:
+    if asc.isdigit():   
+        logString += chr(int(asc)) 
+
+filename = "rare_seeds.txt"
 f = open(filename, "w")
-f.write(log)
+f.write(logString)
 f.close()

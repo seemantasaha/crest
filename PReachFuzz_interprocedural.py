@@ -206,9 +206,9 @@ class CFG:
 			writeRemainingLogs()
 			exit()
 			#os.system('reboot now')
-		#if len(path) >= 120:
-		#	self.computePathProbability(path)
-		#	return
+		if len(path) >= 60:
+			self.computePathProbability(path)
+			return
 		u.setVisited(True)
 		uID = u.getID()
 		

@@ -1,3 +1,4 @@
+from curses.ascii import isdigit
 import sys
 import os
 
@@ -112,7 +113,8 @@ def main(pathDir, projectDir, binaryWithArg):
     ascii_vals = log.split()
     logString = ""
     for asc in ascii_vals:
-        logString += chr(int(asc)) 
+        if asc.isdigit():   
+            logString += chr(int(asc)) 
 
     filename = "rare_seeds.txt"
     f = open(filename, "w")

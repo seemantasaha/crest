@@ -194,14 +194,14 @@ class CFG:
 	def printAllPathsUtil(self, u, path, startTime):
 		now = datetime.now()
 		delta = now - startTime
-		if delta.total_seconds() >= 86400:
+		if delta.total_seconds() >= 10800:
 			#printHardestPaths()
 			writeRemainingLogs()
 			exit()
 			#os.system('reboot now')
-		#if len(path) >= 60:
-		#	self.computePathProbability(path)
-		#	return
+		if len(path) >= 60:
+			self.computePathProbability(path)
+			return
 		u.setVisited(True)
 		uID = u.getID()
 		#print("Node: " + str(uID))
@@ -293,98 +293,20 @@ class CFG:
 						pathProb *= self.nodeProbDict[nodeID]
 					else:
 						pass
-		#print(pathProb)
-		#printString(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
 		
-		'''
-		if "->8360" in pathLineStr and "->6873" in pathLineStr:
-			print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
+		if pathProb > 1.0e-35:
+			return
+		
+		printString(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
+		
+		if "->6607" in pathLineStr or "->5421" in pathLineStr or "->5984" in pathLineStr or "->5339" in pathLineStr:
+			#printString(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
 			now = datetime.now()
 			current_time = now.strftime("%H:%M:%S")
 			print("Current Time =", current_time)
-		'''
-		if "->6872" in pathLineStr:# or "->6607" in pathLineStr or "->5421" in pathLineStr or "->5984" in pathLineStr or "->5339" in pathLineStr:
-			printString(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
-			now = datetime.now()
-			current_time = now.strftime("%H:%M:%S")
-			print("Current Time =", current_time)
-			#print("Exiting the analysis...")
-			#exit()
-			#os.system('reboot now')
-		'''
-		if "->6427" in pathLineStr or "->6432" in pathLineStr or "->6437" in pathLineStr:
-			print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
-			now = datetime.now()
-			current_time = now.strftime("%H:%M:%S")
-			print("Current Time =", current_time)
-			#print("Exiting the analysis...")
-			exit()
-			#os.system('reboot now')
-		'''
-		
-		
-		#if pathProb > 1.0e-50:
-		#	return
-		#print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
-		#hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
 
-		# code to not add the similar path as the immediate last path
-		#addFlag = True
-		#removeAddFlag = False
-		
-		'''
-		global lastPathNodeStr
-		global lastPathLineStr
-		#print("Last path: " +  lastPathNodeStr)
-		#print("Current path: " +  pathNodeStr)
-		sim = similar(lastPathNodeStr,pathNodeStr)
-		#print("similarity:" + str(sim))
-		if sim >= 80:
-			addFlag = False
-			if(len(pathNodeStr) > len(lastPathNodeStr)):
-				removeAddFlag = True
-		if addFlag:
-			lastPathNodeStr, lastPathLineStr = pathNodeStr, pathLineStr
-			hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
-		elif removeAddFlag:
-			#print("Removed key")
-			if (lastPathNodeStr, lastPathLineStr) in hardestPaths:
-				del hardestPaths[(lastPathNodeStr, lastPathLineStr)]
-			hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
-			lastPathNodeStr, lastPathLineStr = pathNodeStr, pathLineStr
-		else:
-			pass
-		'''
-		
-		#now1 = datetime.now()
-		#similarPathNodeStr=""
-		'''
-		for key in hardestPaths:
-			sim = similar(key[0],pathNodeStr)
-			if sim >= 90:
-				similarPathNodeStr = pathNodeStr
-				addFlag = False
-				#print(len(pathNodeStr))
-				#print(len(similarPathNodeStr))
-				if len(pathNodeStr) > len(similarPathNodeStr):
-					removeAddFlag = True
-				break;
-		#print(similarPathNodeStr)
-		#print(pathNodeStr)
-		#print(addFlag)
-		#print(removeAddFlag)
-		if addFlag:
-			hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
-		elif removeAddFlag:
-			del hardestPaths[key]
-			hardestPaths[(pathNodeStr,pathLineStr)] = pathProb
-		else:
-			pass
-		#print(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
-		#now2 = datetime.now()
-		#time_diff = now2 - now1
-		#print("time spent: " + str(time_diff.total_seconds()))
-		'''
+	
+
 
 	def modelCount(self, consPath):
 		#print(consPath)
