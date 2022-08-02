@@ -14,9 +14,6 @@ hardestPathsUsingLines = {}
 lastPathNodeStr = ""
 lastPathLineStr = ""
 
-pathPrefixDict = {}
-pathPrefixPathDict = {}
-
 branchStmtCondMap = {}
 
 loop_bound = 1
@@ -108,22 +105,14 @@ class CFG:
 		self.nodeWithIncomingEdgeSet = set()
 		self.edgeSet = set()
 		self.nodeEdgeMappingDict = {}
+		self.pathPrefixProbDict = {}
+		self.pathPrefixLineDict = {}
+		self.memoized = 0
 
 	def setRootNode(self, rootNode):
 		self.rootNode = self.nodeIDDict[int(rootNode)]
 
 	def parseCFG(self):
-
-		'''
-		if os.path.exists("strings_probability.txt"):
-			branchProbFile = open("strings_probability.txt", "r")
-			probLines = branchProbFile.readlines()
-			for line in probLines:
-				lp = line.strip().split(": ")
-				id = int(lp[0])
-				prob = float(lp[1])
-				self.nodeProbDict[id] = prob
-		'''
 
 		cfgFile = open(self.cfgPath, 'r')
 		lines = cfgFile.readlines()
@@ -191,39 +180,25 @@ class CFG:
 				print(str(item.getID()) + " -> " 
 					+ str(self.nodeEdgeMappingDict[item][0].getID()))
 
-	def printAllPathsUtil(self, u, path, startTime):
+	def printAllPathsUtil(self, u, pathNodeStr, startTime):
 		now = datetime.now()
 		delta = now - startTime
-		if delta.total_seconds() >= 10800:
+		if delta.total_seconds() >= 8640:
 			#printHardestPaths()
 			writeRemainingLogs()
+			print("Number of times memoized: " + str(self.memoized))
 			exit()
 			#os.system('reboot now')
-		if len(path) >= 60:
-			self.computePathProbability(path)
+		if pathNodeStr.count("->") >= 60:
+			self.computePathProbability(pathNodeStr)
 			return
 		u.setVisited(True)
 		uID = u.getID()
-		#print("Node: " + str(uID))
-		'''
-		if str(uID) == "137535":
-			#print("Node: " + str(uID))
-			print("Number of outgoing nodes: " + str(len(self.nodeEdgeMappingDict[u])))
-			if len(self.nodeEdgeMappingDict[u]) >= 2:
-				leftNodeIDProb = self.nodeProbDict[self.nodeEdgeMappingDict[u][0].getID()]
-				rightNodeIDProb = self.nodeProbDict[self.nodeEdgeMappingDict[u][1].getID()]
-				print("Left node: " + str(self.nodeEdgeMappingDict[u][0].getID()))
-				print("Right node: " + str(self.nodeEdgeMappingDict[u][1].getID()))
-			else:
-				leftNodeIDProb = self.nodeProbDict[self.nodeEdgeMappingDict[u][0].getID()]
-				print("Left node: " + str(self.nodeEdgeMappingDict[u][0].getID()))
-			exit()
-		'''
 
 		if str(uID) in self.nodeLineDict:
-			path.append(u)
+			pathNodeStr += str(uID) + "->"
 		if u not in self.nodeEdgeMappingDict:
-			self.computePathProbability(path)
+			self.computePathProbability(pathNodeStr)
 			#self.computePathNodesProbability(path)
 			#self.computePathLineNumProbability(path)
 		elif u in self.nodeEdgeMappingDict:
@@ -245,58 +220,130 @@ class CFG:
 				if len(self.nodeEdgeMappingDict[u]) >= 2:
 					if self.nodeEdgeMappingDict[u][0].isVisited() == False:
 						#print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID()))
-						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
+						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], pathNodeStr, startTime)
 					if self.nodeEdgeMappingDict[u][1].isVisited() == False:
 						#print("Going to " + str(self.nodeEdgeMappingDict[u][1].getID()))
-						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][1], path, startTime)
+						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][1], pathNodeStr, startTime)
 				else:
 					if self.nodeEdgeMappingDict[u][0].isVisited() == False:
 						#print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID())) 
-						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
+						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], pathNodeStr, startTime)
 			else:
 				if len(self.nodeEdgeMappingDict[u]) >= 2:
 					if self.nodeEdgeMappingDict[u][1].isVisited() == False:
 						#print("Going to " + str(self.nodeEdgeMappingDict[u][1].getID())) 
-						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][1], path, startTime)
+						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][1], pathNodeStr, startTime)
 					if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
 						#print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID())) 
-						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
+						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], pathNodeStr, startTime)
 				else:
 					if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
 						#print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID())) 
-						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], path, startTime)
+						self.printAllPathsUtil(self.nodeEdgeMappingDict[u][0], pathNodeStr, startTime)
 
 		if str(uID) in self.nodeLineDict:
-			path.pop()
+			lastPos = pathNodeStr.rfind("-")
+			pathNodeStr = pathNodeStr[:lastPos]
+			lastPos = pathNodeStr.rfind("-")
+			pathNodeStr = pathNodeStr[:lastPos] + "->"
+			
 		u.setVisited(False)
 
 	def printAllPaths(self, s, startTime):
 		for node in self.nodeSet:
 			node.setVisited(False)
-		path = []
-		self.printAllPathsUtil(s, path, startTime)
-
-	def computePathProbability(self, path):
 		pathNodeStr = ""
+		self.printAllPathsUtil(s, pathNodeStr, startTime)
+
+	def computePathProbability(self, pathNodeStr):
+		
 		pathLineStr = ""
 		pathProb = 1.0
-		for node in path:
-			#node.setVisited(False)
-			nodeID = node.getID()
-			if str(nodeID) in self.nodeLineDict: # and str(self.nodeLineDict[str(nodeID)]) != "-1":
-				pathNodeStr += str(nodeID) + "->"
-				pathLineStr += str(self.nodeLineDict[str(nodeID)]) + "->"
-				if nodeID in self.nodeProbDict: 
-					if len(self.depLineSet) == 0:
-						pathProb *= self.nodeProbDict[nodeID]
-					elif str(self.nodeLineDict[str(nodeID)]) in self.depLineSet:
-						pathProb *= self.nodeProbDict[nodeID]
-					else:
-						pass
+		lastPathNodeStr = pathNodeStr
+
+		lastPos = lastPathNodeStr.rfind("-")
+		lastPathNodeStr = lastPathNodeStr[:lastPos]
+		lastPos = lastPathNodeStr.rfind("-")
+		nodeID = int(lastPathNodeStr[lastPos+2:])
+		lastPathNodeStr = lastPathNodeStr[:lastPos] + "->"
+
+		flagToNotRunForwardMemoization = False
+
+		while True:
+			if str(nodeID) in self.nodeLineDict:
+				pathLineStr = str(self.nodeLineDict[str(nodeID)]) + "->" + pathLineStr
+			else:
+				pathLineStr = "-1" + "->" + pathLineStr
+
+			if nodeID in self.nodeProbDict: 
+				if len(self.depLineSet) == 0:
+					pathProb *= self.nodeProbDict[nodeID]
+				elif str(self.nodeLineDict[str(nodeID)]) in self.depLineSet:
+					pathProb *= self.nodeProbDict[nodeID]
+				else:
+					pass
+
+
+			if lastPathNodeStr == "":
+				self.pathPrefixLineDict[pathNodeStr] = pathLineStr
+				self.pathPrefixProbDict[pathNodeStr] = pathProb
+				break
+
+			elif lastPathNodeStr in self.pathPrefixProbDict:
+				pathProb = self.pathPrefixProbDict[lastPathNodeStr] * pathProb
+				pathLineStr = str(self.pathPrefixLineDict[lastPathNodeStr]) + pathLineStr
+				self.pathPrefixLineDict[pathNodeStr] = pathLineStr
+				self.pathPrefixProbDict[pathNodeStr] = pathProb
+				flagToNotRunForwardMemoization = True
+				self.memoized +=1
+				break
+
+			else:
+				#probComputedPathNodeStr = pathNodeStr[len(lastPathNodeStr):]
+				#self.pathPrefixLineDict[probComputedPathNodeStr] = pathLineStr
+				#self.pathPrefixProbDict[probComputedPathNodeStr] = pathProb
+				lastPos = lastPathNodeStr.rfind("-")
+				lastPathNodeStr = lastPathNodeStr[:lastPos]
+				lastPos = lastPathNodeStr.rfind("-")
+				if lastPos != -1:
+					nodeID = int(lastPathNodeStr[lastPos+2:])
+					lastPathNodeStr = lastPathNodeStr[:lastPos] + "->"
+				else:
+					nodeID = int(lastPathNodeStr)
+					lastPathNodeStr = ""
+
+
+		if not flagToNotRunForwardMemoization:
+
+			pathLineStr = ""
+			pathProb = 1.0
+
+			nodes = pathNodeStr.split("->")
+			partialPathNodeStr = ""
+			partialPathLineStr = ""
+			for nodeID in nodes:
+				
+				partialPathNodeStr += str(nodeID) + "->"
+				if str(nodeID) in self.nodeLineDict:
+					partialPathLineStr += str(self.nodeLineDict[str(nodeID)]) + "->"
+				else:
+					partialPathLineStr += "-1" + "->"
+				
+				if nodeID != "":
+					nodeID = int(nodeID)
+					if nodeID in self.nodeProbDict: 
+						if len(self.depLineSet) == 0:
+							pathProb *= self.nodeProbDict[nodeID]
+						elif str(self.nodeLineDict[str(nodeID)]) in self.depLineSet:
+							pathProb *= self.nodeProbDict[nodeID]
+						else:
+							pass
+					self.pathPrefixProbDict[partialPathNodeStr] = pathProb
+					self.pathPrefixLineDict[partialPathNodeStr] = partialPathLineStr
 		
-		if pathProb > 1.0e-35:
+		if pathProb > 1.0e-50:
 			return
-		
+
 		printString(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
 		
 		if "->6607" in pathLineStr or "->5421" in pathLineStr or "->5984" in pathLineStr or "->5339" in pathLineStr:

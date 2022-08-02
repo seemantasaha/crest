@@ -62,7 +62,7 @@ def main(pathDir, projectDir, binaryWithArg):
 
     sp = dict(sorted(hardestPaths.items(), key=lambda item: item[1]))
 
-    count = 100
+    count = 10
 
     if not os.path.exists(logDir):
         os.makedirs(logDir)
@@ -71,6 +71,12 @@ def main(pathDir, projectDir, binaryWithArg):
         os.system(rmCommand)
 
     num = 1
+    rare_paths = ""
+    for k,v in sp.items():
+        rare_paths += str(k) + " : " + str(v) + "\n"
+
+    os.system("echo \"" + rare_paths + "\" > rare_paths.txt")
+
     for k,v in sp.items():
         path_node = str(k).strip().split("(")[0]
         path_node = path_node.strip()
