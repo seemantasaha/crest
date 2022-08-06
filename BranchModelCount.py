@@ -43,8 +43,8 @@ def main(branchConstraintDir):
         if not filename.endswith("smt2"):
             continue
         branchid = int(filename.split("_")[1].split(".smt2")[0])
-        #if branchid < 4635458 or branchid > 4652062:
-        #    continue
+        if branchid < 875 or branchid > 3214:
+            continue
         consPath = branchConstraintDir + "/" + filename
         count, flag = modelCount(consPath)
         domain = computeDomain(consPath)

@@ -692,7 +692,7 @@ class CFG:
                 with open(consPath) as f:
                         lines = f.readlines()
                         for line in lines:
-                                if "declare-fun" in line and "xml" in line:
+                                if "declare-fun" in line and ("xml" in line or "xslt" in line):
                                         nodeList = self.nodeEdgeMappingDict[self.nodeIDDict[nodeID]]
                                         self.nodeProbDict[nodeList[0].getID()] = 1.0
                                         self.nodeProbDict[nodeList[1].getID()] = 1.0
@@ -791,7 +791,7 @@ class CFG:
                 print("Number of functions: " + str(len(self.funcStartingNodes)))
 
 
-def main(cfgPath, branchConstraintDir, depFile, analysisType, analysisTime, analysisDepth):
+def main(cfgPath, branchConstraintDir, depFile, analysisType, analysisTime, analysisDepth, rootNode):
 
         startTime = datetime.now()
         current_time = startTime.strftime("%H:%M:%S")
@@ -839,13 +839,15 @@ def main(cfgPath, branchConstraintDir, depFile, analysisType, analysisTime, anal
                         cfg.traverseCFG()
                         cfg.printAllPaths(cfg.getRootNode())
         '''
-        funcRootNode = 4648324
+        #funcRootNode = 4648324
         #funcRootNode = 4648367
         #funcRootNode = 4648353
         #funcRootNode = 2331618
         #funcRootNode = 24
         #funcRootNode = 270342
         
+        funcRootNode = int(rootNode)
+
         cfg.setRootNode(funcRootNode)
 
         cfg.printAllPaths(cfg.getRootNode(), startTime)
@@ -870,7 +872,8 @@ if __name__ == "__main__":
     parser.add_argument('--analysis_type', metavar='type', required=True, help='analysis type')
     parser.add_argument('--analysis_time', metavar='time', required=True, help='analysis time')
     parser.add_argument('--analysis_depth', metavar='depth', required=True, help='analysis depth')
+    parser.add_argument('--root_node', metavar='rootnode', required=True, help='root node')
 
     args = parser.parse_args()
     main(cfgPath=args.cfg_path, branchConstraintDir=args.branch_constraints_dir, depFile=args.dependent_node_file, 
-    analysisType=args.analysis_type, analysisTime=args.analysis_time, analysisDepth=args.analysis_depth)
+    analysisType=args.analysis_type, analysisTime=args.analysis_time, analysisDepth=args.analysis_depth, rootNode=args.root_node)
