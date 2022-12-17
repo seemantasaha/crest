@@ -236,6 +236,8 @@ class CFG:
                 u.setVisited(True)
                 uID = u.getID()
 
+                #print("node: " + str(uID))
+
                 if str(uID) in self.nodeLineDict:
                         pathNodeStr += str(uID) + "->"
 
@@ -273,16 +275,22 @@ class CFG:
                                         if self.nodeEdgeMappingDict[u][0].isVisited() == False:
                                                         #print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID()))
                                                         self.printAllPathsUtilIntraInter(self.nodeEdgeMappingDict[u][0], pathNodeStr, startTime)
+                                        #else:
+                                        #        self.computePathProbability(pathNodeStr)
                                         #print("Left node done, now right node")
                                         if self.nodeEdgeMappingDict[u][1].isVisited() == False:
                                                 if str(self.nodeEdgeMappingDict[u][1].getID()) in self.funcStartingNodes:
                                                         self.funcReturningNode.append(self.nodeEdgeMappingDict[u][0])
                                                 #print("Going to " + str(self.nodeEdgeMappingDict[u][1].getID()))
                                                 self.printAllPathsUtilIntraInter(self.nodeEdgeMappingDict[u][1], pathNodeStr, startTime)
+                                        #else:
+                                        #        self.computePathProbability(pathNodeStr)
                                 else:
                                         if self.nodeEdgeMappingDict[u][0].isVisited() == False:
                                                 #print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID())) 
                                                 self.printAllPathsUtilIntraInter(self.nodeEdgeMappingDict[u][0], pathNodeStr, startTime)
+                                        #else:
+                                        #        self.computePathProbability(pathNodeStr)
                                         #print("Left node done, no right node")
                         else:
                                 if len(self.nodeEdgeMappingDict[u]) >= 2:
@@ -291,14 +299,20 @@ class CFG:
                                                         self.funcReturningNode.append(self.nodeEdgeMappingDict[u][0])
                                                 #print("Going to " + str(self.nodeEdgeMappingDict[u][1].getID())) 
                                                 self.printAllPathsUtilIntraInter(self.nodeEdgeMappingDict[u][1], pathNodeStr, startTime)
+                                        #else:
+                                        #        self.computePathProbability(pathNodeStr)
                                         #print("Right node done, now left node")
                                         if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
                                                 #print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID())) 
                                                 self.printAllPathsUtilIntraInter(self.nodeEdgeMappingDict[u][0], pathNodeStr, startTime)
+                                        #else:
+                                        #        self.computePathProbability(pathNodeStr)
                                 else:
                                         if self.nodeEdgeMappingDict[u][0].isVisited() == False: 
                                                 #print("Going to " + str(self.nodeEdgeMappingDict[u][0].getID())) 
                                                 self.printAllPathsUtilIntraInter(self.nodeEdgeMappingDict[u][0], pathNodeStr, startTime)
+                                        #else:
+                                        #        self.computePathProbability(pathNodeStr)
                                         #print("Left node done, no right node")
 
                 if str(uID) in self.nodeLineDict:
@@ -514,10 +528,10 @@ class CFG:
 
                 self.origNumberOfPaths += 1
 
-                if "4644237" in pathNodeStr:
-                        now = datetime.now()
-                        current_time = now.strftime("%H:%M:%S")
-                        print("Current Time for 6872 =", current_time)
+                #if "4644237" in pathNodeStr:
+                #        now = datetime.now()
+                #        current_time = now.strftime("%H:%M:%S")
+                #        print("Current Time for 6872 =", current_time)
 
                 if self.checkPathToAdd(pathNodeStr) == False:
                         return
@@ -652,7 +666,7 @@ class CFG:
                 
                 printString(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
 
-                
+                '''
                 if "->6872" in pathLineStr:
                         #printString(pathNodeStr + "(" + pathLineStr + ") : " + str(pathProb))
                         now = datetime.now()
@@ -664,6 +678,7 @@ class CFG:
                         now = datetime.now()
                         current_time = now.strftime("%H:%M:%S")
                         print("Current Time =", current_time)
+                '''
                 
 
         def modelCount(self, consPath):

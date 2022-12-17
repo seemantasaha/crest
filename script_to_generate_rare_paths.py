@@ -52,6 +52,8 @@ def main(pathDir):
     hardestPaths = {}
 
     for path in total_desired_paths:
+        if " : " not in path:
+            continue
         key_val = path.strip().split(" : ")
         key = key_val[0]
         val = float(key_val[1])
@@ -65,6 +67,10 @@ def main(pathDir):
     rare_paths = ""
     for k,v in sp.items():
         rare_paths += str(k) + " : " + str(v) + "\n"
+        #print(str(k) + " : " + str(v) + "\n")
+        if count <= 0:
+            break
+        count -= 1
 
     os.system("echo \"" + rare_paths + "\" > rare_paths.txt")
 

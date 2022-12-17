@@ -62,7 +62,7 @@ def main(pathDir, projectDir, binaryWithArg):
 
     sp = dict(sorted(hardestPaths.items(), key=lambda item: item[1]))
 
-    count = 10
+    count = 50
 
     if not os.path.exists(logDir):
         os.makedirs(logDir)
@@ -98,7 +98,7 @@ def main(pathDir, projectDir, binaryWithArg):
     log_set = set()
 
     for filename in os.listdir(logDir):
-        with open(os.path.join(logDir, filename), 'r') as f:
+        with open(os.path.join(logDir, filename), 'r', errors='replace') as f:
             print("File: " + str(filename))
             lines = f.readlines()
         

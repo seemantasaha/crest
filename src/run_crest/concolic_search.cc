@@ -136,8 +136,10 @@ Search::Search(const string& program, int max_iterations)
           num_covered_, reachable_functions_, reachable_branches_);
 
   fprintf(stderr, "Number of branches: %u\n", branches_.size());
+  
   // Sort the branches.
   sort(branches_.begin(), branches_.end());
+  printf("branches are sorted");
 }
 
 
@@ -180,6 +182,7 @@ void Search::WriteCoverageToFileOrDie(const string& file) {
 
 
 void Search::LaunchProgram(const vector<value_t>& inputs) {
+  printf("Program launched\n");
   WriteInputToFileOrDie("input", inputs);
 
   /*
@@ -311,11 +314,11 @@ bool Search::SolveAtBranch(const SymbolicExecution& ex,
 
       size_t branch_idx = ex.path().constraints_idx()[idx];
       branch_id_t bid = ex.path().branches()[branch_idx];
-      //fprintf(stderr, "[SolveAtBranch] branch_id=%d\n", bid);
+      printf("[SolveAtBranch] branch_id=%d\n", bid);
 
       branch_idx = ex.path().constraints_idx()[i];
       bid = ex.path().branches()[branch_idx];
-      //fprintf(stderr, "[SolveAtBranch] conflicting branch_id=%d\n", bid);
+      printf("[SolveAtBranch] conflicting branch_id=%d\n", bid);
       return false;
     }
   }
@@ -324,9 +327,9 @@ bool Search::SolveAtBranch(const SymbolicExecution& ex,
 				 constraints.begin()+idx+1); // change here to get the prefix of the symbolic path
   map<var_t,value_t> soln;
   constraints[idx]->Negate(); // instead of negating the path, add the constraint for specific branch
-  // fprintf(stderr, "Yices . . . ");
+  printf("Yices . . . ");
   bool success = YicesSolver::IncrementalSolve(ex.inputs(), ex.vars(), cs, &soln);
-  //fprintf(stderr, "%d\n", success);
+  printf("success = %d\n", success);
   constraints[idx]->Negate(); // change accordingly
 
   if (success) {
@@ -1493,7 +1496,7 @@ bool PathDirectedSearch::DoSearch() {
   vector<value_t> input;
 
   vector<int> rare_path;
-  char path[10000] = "3739557 3739560 3739563 3739566 3739569 3739572 3739271 3739277 3728363 3728373 3728380 3728364 3728365 3728367 3728370 3738821 3738824 3738827 3738830 3738833 3738836 3738839 3738847 3728364 3728365 3728367 3728370 3738857 3725227 3725233 3725298 3728364 3728365 3728367 3728370 3738862 3725227 3725233 3725298 3738780 3738781 3725227 3725233 3725298 3738793 3725227 3725233 3725298 3738799 3738800 3725227 3725233 3725298 3738802 3738867 3725227 3725233 3725298 3804638 3804638 3804638 3739316 3739319 3739323 3739328 3739331 3739334 3739342 3728364 3728365 3728366 3728372 3728380 3728364 3728365 3728367 3728370 3804537 3804537 3804537 3728364 3728365 3728367 3728370 3728348 3739470 3739486 3728348 3739636 3739639 3739642 3739645 3739648 3739651 3739654 3739657 3739660 3739664 3739668 3739672 3739675 3739676 3739683 3739695 3739699 3739705 3738625 3738497 3738501 3738509 3738510 3738520 3738523 3738526 3738529 3738532 3738535 3738538 3738541 3738544 3738547 3738583 3738587 3738590 3738598 3738603 3738606 3726833 3726838";
+  char path[10000] = "3 4 5 6";
   //fprintf(stderr, "%s", path);
   char *token = strtok(path, " ");
   //fprintf(stderr, "%s", token);
@@ -1609,66 +1612,23 @@ void PathGuidedSearch::Run() {
 
 
 bool PathGuidedSearch::DoSearch() {
-
+  
+  printf("Inside DoSearch\n");
   
   SymbolicExecution ex;
   vector<value_t> init_input;
-  init_input.push_back(60);
-  init_input.push_back(63);
-  init_input.push_back(120);
-  init_input.push_back(109);
-  init_input.push_back(108);
-  init_input.push_back(32);
-  init_input.push_back(118);
-  init_input.push_back(101);
-  init_input.push_back(114);
-  init_input.push_back(115);
-  init_input.push_back(105);
-  init_input.push_back(111);
-  init_input.push_back(110);
-  init_input.push_back(61);
-  init_input.push_back(34);
-  init_input.push_back(49);
-  init_input.push_back(46);
-  init_input.push_back(48);
-  init_input.push_back(34);
-  init_input.push_back(63);
-  init_input.push_back(62);
-  init_input.push_back(10);
 
-  // 60 97 32 98 61 34 99 34 62 100 60 47 97 62
-  init_input.push_back(60);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(32);
-  init_input.push_back(98);
-  init_input.push_back(61);
-  init_input.push_back(34);
-  init_input.push_back(99);
-  init_input.push_back(34);
-  init_input.push_back(62);
-  init_input.push_back(100);
-  init_input.push_back(60);
-  init_input.push_back(47);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(97);
-  init_input.push_back(62);
+  char initial_input[10000] = "97 61 98 61 99 61 50 60 51";
+
+  char *tok = strtok(initial_input, " ");
+  //fprintf(stderr, "%s", token);
+  // loop through the string to extract all other tokens
+  while( tok != NULL ) {
+    printf("%s", tok);
+    init_input.push_back(atoi(tok));
+    tok = strtok(NULL, " ");
+  }
+
   
   RunProgram(init_input, &ex);
 
@@ -1676,17 +1636,7 @@ bool PathGuidedSearch::DoSearch() {
   vector<value_t> input;
 
   vector<int> rare_path;
-  //char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648340 4648352 4648356 4648359 4648368 4648371 4648372 4648379 4648381 4648382 4648385 4648388 4648395 4648399 4648404 4648407 4648410 4648413 4648416 4648419 4648422 4648425 4648428 4648432 4645502 4645509 4645511 4645513 4644237 4644240 4642941 4642944 4642947 4642951 4642954 4642956 4642959 4642962 4642965";
-  //char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648340 4648352 4648038 4648045 4637122 4637123 4637126 4637132 4637133 4637135 4637136 4637138 4648061 4648084 4648087 4648091 4648092 4648096 4648099 4648102 4648109 4648122 4648125 4648129 4648133 4648136 4648140 4648141 4648145 4648148 4648164 4648169 4648172 4637079 4637081 4637084 4637087 4637091 4637102 4637105 4650387 4650394 4650398 4650401 4650406 4648356 4648357";
   
-  //xmllint intra-inter
-  //char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648340 4648352 4648356 4648359 4648368 4648371 4648372 4648379 4648381 4648382 4648385 4648388 4648395 4648399 4648404 4648407 4648410 4648413 4648416 4648419 4648422 4648425 4648428 4648432 4645502 4645509 4645511 4645512 4645517 4645520 4645523 4645526 4645529 4643937 4643942 4644170 4644171 4644201 4644228 4644231 4644237 4644240 4644244 4644260 4644263 4641972 4641975 4641978 4641981 4641984 4641987 4641990 4641993 4641995 4641998";
-  //char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648340 4648352 4648356 4648359 4648368 4648371 4648372 4648379 4648381 4648382 4648385 4648388 4648395 4648399 4648404 4648407 4648410 4648413 4648416 4648419 4648422 4648425 4648428 4648432 4645502 4645509 4645511 4645512 4645517 4645520 4645523 4645526 4645529 4643937 4644171 4644201 4644233 4644237 4644240 4644244 4644260 4644263 4641972 4641975 4641978 4641981 4641984 4641987 4641990 4641993 4641995 4642003 4642012 4642018 4642023";
-  //char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648340 4648352 4648356 4648359 4648368 4648371 4648372 4648379 4648381 4648382 4648385 4648388 4648395 4648399 4648404 4648407 4648410 4648413 4648416 4648419 4648422 4648425 4648428 4648432 4645502 4645509 4645511 4645512 4645517 4645520 4645523 4645526 4645529 4643937 4643942 4643945 4644169 4644171 4644201 4644233 4644237 4644240 4644245 4644247 4642941 4642944 4642947 4642950 4642953 4642956 4642959 4642962 4642965 4642973 4642979";
-  //char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648340 4648352 4648356 4648359 4648368 4648371 4648372 4648379 4648381 4648382 4648385 4648388 4648395 4648399 4648404 4648407 4648410 4648413 4648416 4648419 4648422 4648425 4648428 4648432 4645502 4645509 4645511 4645512 4645517 4645520 4645523 4645526 4645529 4643937 4643942 4643945 4644169 4644171 4644172 4644200 4644201 4644233 4644237 4644240 4644244 4644259 4643767 4643770 4643773 4643776 4643779 4643782 4643785 4643788 4643791";
-  
-  //xmllint intra
-  //char path[10000] = "4648325 4648328 4648331 4648334 4648337 4648341 4648344 4648347 4648352 4648356 4648359 4648368 4648371 4648372 4648379 4648381 4648382 4648390 4648395 4648398 4648404 4648407 4648410 4648413 4648416 4648419 4648422 4648425 4648428 4648437 4648440 4648443 4648444 4648451 4648463 4648466 4637079 4637081 4637084 4637087 4637091 4637102 4637108 4637117";
   char path_arr[10000];
   strcpy(path_arr, path_.c_str());
   //fprintf(stderr, "%s", path);
@@ -1726,7 +1676,7 @@ bool PathGuidedSearch::DoSearch() {
   }
   fprintf(stderr, "\n");
 
-  int count = 100;
+  int count = 1000;
   int best_num_rare_path_nodes = 0;
   int best_num_new_rare_path_nodes = 0;
   vector<int> rare_path_nodes;
@@ -1753,6 +1703,7 @@ bool PathGuidedSearch::DoSearch() {
   while (found == 0 && count >= 1) {
     
     int could_solve = 0;
+    idx = 0;
     size_t branch_idx = ex.path().constraints_idx()[idx];
     branch_id_t bid = ex.path().branches()[branch_idx];
     branch_id_t selected_bid = bid;
