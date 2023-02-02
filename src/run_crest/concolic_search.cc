@@ -1618,7 +1618,7 @@ bool PathGuidedSearch::DoSearch() {
   SymbolicExecution ex;
   vector<value_t> init_input;
 
-  char initial_input[10000] = "97 61 98 61 99 61 50 60 51";
+  char initial_input[10000] = "A A A A A A A A A A A A A A A A A A A A A A A A A A A A A";
 
   char *tok = strtok(initial_input, " ");
   //fprintf(stderr, "%s", token);
@@ -1634,6 +1634,7 @@ bool PathGuidedSearch::DoSearch() {
 
   // Solve.
   vector<value_t> input;
+  vector<value_t> last_input;
 
   vector<int> rare_path;
   
@@ -1676,10 +1677,11 @@ bool PathGuidedSearch::DoSearch() {
   }
   fprintf(stderr, "\n");
 
-  int count = 1000;
+  int count = 10;
   int best_num_rare_path_nodes = 0;
   int best_num_new_rare_path_nodes = 0;
   vector<int> rare_path_nodes;
+  vector<int> negated_branches;
 
   //check if some prefix match, if then do not negate those initial branches
   sim_idx = 0;
@@ -1719,9 +1721,7 @@ bool PathGuidedSearch::DoSearch() {
       } else {
         size_t branch_idx = ex.path().constraints_idx()[idx];
         branch_id_t bid = ex.path().branches()[branch_idx];
-        //if (bid == 4491872) {
-          printf("Successfully negated a branch (%d) to do further analysis\n", bid);
-        //}
+        printf("Successfully negated a branch (%d) to do further analysis\n", bid);
         could_solve = 1;
         SymbolicExecution cur_ex;
         RunProgram(input, &cur_ex);
@@ -1732,12 +1732,12 @@ bool PathGuidedSearch::DoSearch() {
         int num_new_rare_path_nodes = 0;
 
         //if (bid == 4491872) {
-          printf("inputs:\n");
-          for(int i=0; i < input.size(); i++) {
-            printf("%d ", input.at(i));
-          }
-          printf("\n");
-          printf("cur_path_size = %d\n", cur_path_size);
+          // printf("inputs:\n");
+          // for(int i=0; i < input.size(); i++) {
+          //   printf("%d ", input.at(i));
+          // }
+          // printf("\n");
+          // printf("cur_path_size = %d\n", cur_path_size);
         //}
 
         while (cur_idx < cur_path_size) {
@@ -1796,15 +1796,25 @@ bool PathGuidedSearch::DoSearch() {
       printf("No path is not feasible");
       return false;
     } else {
+      if (std::find(negated_branches.begin(), negated_branches.end(), selected_idx) != negated_branches.end()) {
+        printf("inputs:\n");
+        for(int i=0; i < last_input.size(); i++) {
+          printf("%d ", last_input.at(i));
+        }
+        exit(0);
+      } else {
+        negated_branches.push_back(selected_idx);
+      }
       printf("idx before = %d\n", idx);
       idx = selected_idx + 1; //to start negating from this point in the next iteration
       printf("idx after = %d\n", idx);
-      printf("Successfully negated a branch to get closer to the rare path\n");
+      printf("Successfully negated branch %d to get closer to the rare path\n", selected_bid);
       SolveAtBranch(ex, selected_idx, &input);
       printf("inputs:\n");
       for(int i=0; i < input.size(); i++) {
         printf("%d ", input.at(i));
       }
+      last_input = input;
       printf("\nRunning program ...");
       SymbolicExecution cur_ex;
       RunProgram(input, &cur_ex);
